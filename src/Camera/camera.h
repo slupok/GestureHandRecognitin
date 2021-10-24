@@ -6,7 +6,7 @@
 
 #include "videoSurfaceCaptured.h"
 #include "basedVideoSurface.h"
-#include "imageDataBuffer.h"
+#include "../GestureRecognition/imageDataBuffer.h"
 
 class GestureRecognition;
 

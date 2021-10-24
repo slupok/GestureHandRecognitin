@@ -1,6 +1,9 @@
-#include "imageDataBuffer.h"
 #include "string.h"
+
 #include <QImage>
+
+#include "imageDataBuffer.h"
+
 
 YCC_format RGB2YCC_JPEG(RGB_format rgb)
 {

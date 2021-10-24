@@ -1,5 +1,7 @@
-#include "gestureRecognition.h"
 #include <math.h>
+
+#include "gestureRecognition.h"
+
 
 //Евклидова метрика
 float length_E(RGB_format a, RGB_format b)

@@ -1,7 +1,9 @@
-#include "webcam.h"
+
 #include <QApplication>
-#include "gestureRecognition.h"
-#include "camera.h"
+
+#include "Camera/webcam.h"
+#include "GestureRecognition/gestureRecognition.h"
+#include "Camera/camera.h"
 
 #include <QDebug>
 #include <QObject>

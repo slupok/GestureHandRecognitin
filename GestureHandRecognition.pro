@@ -9,23 +9,23 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    basedVideoSurface.cpp \
-    camera.cpp \
-    gestureRecognition.cpp \
-    imageDataBuffer.cpp \
-    main.cpp \
-    webcam.cpp
+    src/Camera/basedVideoSurface.cpp \
+    src/Camera/camera.cpp \
+    src/GestureRecognition/gestureRecognition.cpp \
+    src/GestureRecognition/imageDataBuffer.cpp \
+    src/main.cpp \
+    src/Camera/webcam.cpp
 
 HEADERS += \
-    camera.h \
-    gestureRecognition.h \
-    imageDataBuffer.h \
-    videoSurfaceCaptured.h \
-    basedVideoSurface.h \
-    webcam.h
+    src/Camera/camera.h \
+    src/GestureRecognition/gestureRecognition.h \
+    src/GestureRecognition/imageDataBuffer.h \
+    src/Camera/videoSurfaceCaptured.h \
+    src/Camera/basedVideoSurface.h \
+    src/Camera/webcam.h
 
 FORMS += \
-    webcam.ui
+    src/Camera/webcam.ui
 
 
 LIBS += -L "C:/Program Files (x86)/AMD APP SDK/2.9-1/lib/x86_64"

@@ -1,4 +1,5 @@
 #include "camera.h"
+
 Camera::Camera()
 {
     m_surface = new BasedVideoSurface(this);

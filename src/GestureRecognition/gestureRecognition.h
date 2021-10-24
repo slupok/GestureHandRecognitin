@@ -1,8 +1,13 @@
 #ifndef GESTURERECOGNITION_H
 #define GESTURERECOGNITION_H
+#include <math.h>
+
 #include "imageDataBuffer.h"
-#include "camera.h"
-#include "webcam.h"
+
+#include "../Camera/camera.h"
+#include "../Camera/webcam.h"
+
+
 //void thresholdColorConversion(ImageBuffer buffer);
 void test();
 class GestureRecognition
