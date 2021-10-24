@@ -2,20 +2,9 @@
 #define WEBCAM_H
 
 #include <QMainWindow>
-#include <QMultimedia>
-#include <QCamera>
-#include <QtMultimediaWidgets/QCameraViewfinder>
-#include <QCameraInfo>
-#include <QCameraImageCapture>
-
-#include <QVideoFrame>
-#include <QAbstractVideoSurface>
+#include <QImage>
 #include <QLabel>
-#include <QVideoSurfaceFormat>
 
-#include <QImageEncoderSettings>
-
-#include "basedVideoSurface.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class WebCam; }
 QT_END_NAMESPACE
@@ -29,21 +18,9 @@ class WebCam : public QMainWindow
 public:
     WebCam(QWidget *parent = nullptr);
     ~WebCam();
-    void SetCamera(QCameraInfo cameraInfo);
-    void StartCamera();
-    void GetFrame();
-    QLabel* GetLabel();
+    void setImage(QImage img);
 private:
-        Ui::WebCam *ui;
-
-    QCamera *m_camera;
-    QCamera *m_bitmapCamera;
-    QString m_cameraName;
-    int m_cameraWidth;
-    int m_cameraHeight;
-
-    QCameraImageCapture *m_imageCapture;
-     QCameraImageCapture *m_imageCaptureBitmap;
+    Ui::WebCam *ui;
 
     QPixmap m_pixmap;
 };

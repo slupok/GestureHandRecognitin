@@ -13,55 +13,13 @@ WebCam::~WebCam()
     delete ui;
 }
 
-void WebCam::SetCamera(QCameraInfo cameraInfo)
+void WebCam::setImage(QImage img)
 {
-    WebCam::m_camera = new QCamera(cameraInfo);
+    ui->label->resize(img.size());
+    ui->label->setPixmap(QPixmap::fromImage(img));
 
-    //QCameraViewfinder *viewFinder = new QCameraViewfinder();
-    //m_camera->setViewfinder(viewFinder);
-    //m_camera->setCaptureMode( QCamera::CaptureViewfinder );
-
-    //ui->gridLayout_2->addWidget(viewFinder,0,0);
-
-
-
-    QAbstractVideoSurface *finder = new BasedVideoSurface(ui->myLabel);
-    //finder->setCamera(m_camera);
-    m_camera->setViewfinder(finder);
-
-    m_camera->start();
-
+    ui->label->update();
 }
 
-void WebCam::StartCamera()
-{
-    m_camera->start();
-    m_imageCapture = new QCameraImageCapture(m_camera);
-    m_imageCapture->setCaptureDestination( QCameraImageCapture::CaptureToBuffer );
-    m_imageCapture->bufferFormatChanged(QVideoFrame::Format_RGB32);
 
-    QImageEncoderSettings imageSettings = m_imageCapture->encodingSettings();
-    QSize size = imageSettings.resolution();
-    m_cameraWidth = size.width();
-    m_cameraHeight = size.height();
-}
-
-void WebCam::GetFrame()
-{
-//как бы получить кадр из видео потока?
-    //отнаследоваться от AbstractVideoSurface
-#if 1
-    QImage img(m_cameraWidth, m_cameraHeight,  QImage::Format_RGB32);
-    m_camera->searchAndLock();
-    m_imageCapture->imageCaptured(0, img);
-    m_camera->unlock();
-#endif
-    img.save("out.jpg", "JPG");
-
-}
-
-QLabel* WebCam::GetLabel()
-{
-    return ui->myLabel;
-}
 
