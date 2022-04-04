@@ -3,18 +3,18 @@
 Camera::Camera()
 {
     m_surface = new BasedVideoSurface(this);
-    m_image = new QImage();
-    //m_buffer = new ImageDataBuffer();
+    //m_callback = new CameraCallback();
 }
 
 void Camera::capture(QImage image)
 {
-    *m_image = image;
-    ImageBuffer buffer;
-    newImageBuffer(&buffer,m_image->bits(),m_image->width(),m_image->height(),PixelTypeRGB);
-    //m_buffer->newImage(m_image->bits(),m_image->width(),m_image->height(),PixelTypeRGB);
-     Callback(&buffer);
+    //ImageBuffer frame;
+    //newImageBuffer(&frame,image.bits(),image.width(),image.height(),PixelTypeRGB);
+    emit callbackFrame(image);
+    //releaseImageBuffer(&frame);
+    //delete &image;
 }
+
 
 void Camera::start()
 {
@@ -29,12 +29,11 @@ void Camera::stop()
 void Camera::setCamera(QCameraInfo cameraInfo)
 {
     m_camera = new QCamera(cameraInfo);
-     m_camera->setViewfinder(m_surface);
+    m_camera->setViewfinder(m_surface);
 }
 
 Camera::~Camera()
 {
     delete m_surface;
-    delete m_image;
     delete m_camera;
 }

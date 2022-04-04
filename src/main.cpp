@@ -7,9 +7,12 @@
 
 #include <QDebug>
 #include <QObject>
+#include <QFile>
 
-#include <CL/cl.h>
+#include "GestureRecognition/ImageProcessing/imageProcessing.h"
 
+#include "GestureRecognition/ImageProcessing/ipContext.h"
+#include "GestureRecognition/ImageProcessing/OpenCL/opencl_context.h"
 
 
 int main(int argc, char *argv[])
@@ -18,14 +21,14 @@ int main(int argc, char *argv[])
     WebCam ui;
     ui.show();
 
-    cl_platform_id platform_id = 0x0;
-    cl_device_id device_id = 0x0;
-    cl_uint num_devices;
-    cl_uint num_platforms;
-    cl_int ret;
+    //покрыть тестами!!!
+#if 0
+    IPContext *ctx = new OpenclContext();
+    if( ctx->GetDeviceType() == IPDeviceOpenCL)
+        qDebug() << "Select OpenCL device";
+    ctx->RunTest();
+#endif
 
-
-    //test();
     GestureRecognition *rg = new GestureRecognition();
     rg->setUI(&ui);
     rg->startGR();

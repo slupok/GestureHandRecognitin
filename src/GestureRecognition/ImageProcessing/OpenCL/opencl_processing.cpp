@@ -1,21 +1,8 @@
-#include "../gestureCL.h"
+#include "../ipOpenCL.h"
 #include <CL/cl.h>
 #include <stdio.h>
 
-static char *source;
-static size_t sourceSize;
-int initSource(char *src, size_t size)
-{
-    if(src == 0x0 || size == 0)
-        return 0;
-
-
-    source = (char*)malloc(size);
-    memcpy(source, src,size);
-    sourceSize = size;
-    return 1;
-
-}
+//удалить можно
 
 int test()
 {
@@ -34,7 +21,7 @@ int test()
     cl_command_queue queue = clCreateCommandQueue(context, device_id, 0, &error);
 
     cl_program program = 0x0;
-    program = clCreateProgramWithSource(context, 1, (const char **)&source, (const size_t *)&sourceSize, &error);
+    //program = clCreateProgramWithSource(context, 1, (const char **)&source, (const size_t *)&sourceSize, &error);
     error = clBuildProgram(program, 1, &device_id, 0x0, 0x0, 0x0);
     cl_kernel kernel = clCreateKernel(program, "test", &error);
 

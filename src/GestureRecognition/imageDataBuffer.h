@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 //эта структура для обработки изображение, переместить в алгоритм
-typedef enum PixelType{
+typedef enum BufferPixelType{
     PixelTypeNone,
     PixelTypeRGB,
     PixelTypeYCC,
@@ -31,16 +31,11 @@ RGB_format YCC2RGB_JPEG(YCC_format ycc);
 
 typedef struct ImageBuffer
 {
-    void* bytes;
-    RGB_format *imageRgb;
-    YCC_format *imageYCC;
-    HSV_format *imageHSV;
+    RGB_format *image;
     char *bitmap;
     int width, height;
-    PixelType type;
 } ImageBuffer;
 
-int newImageBuffer(ImageBuffer *buffer, const void* bytes, const int width, const int height, const PixelType pixelType);
-int bufferToAllFormat(ImageBuffer *buffer, const void *bytes, const PixelType pixelType);
+int newImageBuffer(ImageBuffer *buffer, const void* bytes, const int width, const int height, const BufferPixelType pixelType);
 void releaseImageBuffer(ImageBuffer *buffer);
 #endif // IMAGEDATABUFFER_H

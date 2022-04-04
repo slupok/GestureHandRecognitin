@@ -4,6 +4,7 @@
 
 #include "imageDataBuffer.h"
 
+//можно удалить?
 
 YCC_format RGB2YCC_JPEG(RGB_format rgb)
 {
@@ -59,53 +60,20 @@ RGB_format YCC2RGB_JPEG(YCC_format ycc)
         return color;
 }
 
-int newImageBuffer(ImageBuffer *buffer, const void* bytes, const int width, const int height, const PixelType pixelType)
+int newImageBuffer(ImageBuffer *buffer, const void* bytes, const int width, const int height, const BufferPixelType pixelType)
 {
-    buffer->imageRgb = (RGB_format*)malloc(width * height * sizeof(RGB_format));
-    buffer->imageYCC = (YCC_format*)malloc(width * height * sizeof(YCC_format));
-    buffer->imageHSV = (HSV_format*)malloc(width * height * sizeof(HSV_format));
+    buffer->image = (RGB_format*)malloc(width * height * sizeof(RGB_format));
     buffer->bitmap = (BIT_MAP_TYPE*)malloc(width * height * sizeof(BIT_MAP_TYPE));
     if(pixelType == PixelTypeRGB)//RGB24
     {
-        buffer->type = PixelTypeRGB;
         buffer->width = width;
         buffer->height = height;
-        buffer->bytes = (void*)malloc(width * height * sizeof(RGB_format));
-        memcpy(buffer->bytes, bytes, width * height * sizeof(RGB_format));
-        bufferToAllFormat(buffer,bytes,pixelType);
+        memcpy(buffer->image, bytes,buffer->height * buffer->width * sizeof (RGB_format));
         return 1;
     }
     return 0;
 }
-int bufferToAllFormat(ImageBuffer *buffer, const void *bytes, const PixelType pixelType)
-{
-    if(pixelType == PixelTypeRGB)
-    {
-        memcpy(buffer->imageRgb,bytes,buffer->height * buffer->width * sizeof (RGB_format));
-        int i = 0;
-        for(int y = 0; y < buffer->height; y++)
-            for(int x = 0; x < buffer->width; x++)
-            {
-                i = x + buffer->width * y;
-                buffer->imageYCC[i] = RGB2YCC_JPEG(buffer->imageRgb[i]);
-                buffer->imageHSV[i] = RGB2HSV(buffer->imageRgb[i]);
-            }
-        return 1;
-    }
-    else if (pixelType == PixelTypeYCC)
-    {
-        memcpy(buffer->imageYCC,bytes,buffer->height * buffer->width * sizeof (YCC_format));
-        int i = 0;
-        for(int y = 0; y < buffer->height; y++)
-            for(int x = 0; x < buffer->width; x++)
-            {
-                i = x + buffer->width * y;
-                buffer->imageRgb[i] = YCC2RGB_JPEG(buffer->imageYCC[i]);
-            }
-        return 1;
-    }
-    return 0;
-}
+
 
 void releaseImageBuffer(ImageBuffer *buffer)
 {
@@ -113,11 +81,10 @@ void releaseImageBuffer(ImageBuffer *buffer)
         return;
     if(buffer->bitmap)
         free(buffer->bitmap);
-    if(buffer->bytes)
-        free(buffer->bytes);
-    if(buffer->imageRgb)
-        free(buffer->imageRgb);
-    if(buffer->imageYCC)
-        free(buffer->imageYCC);
+    buffer->bitmap = nullptr;
+    if(buffer->image)
+        free(buffer->image);
+    buffer->image = nullptr;
+
 }
 

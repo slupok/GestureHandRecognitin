@@ -2,7 +2,6 @@
 
 #include "gestureRecognition.h"
 
-
 //Евклидова метрика
 float length_E(RGB_format a, RGB_format b)
 {
@@ -75,6 +74,8 @@ typedef struct Cluster{
     int pointsCount;
 } Cluster;
 
+//поиск принадлежности можно вычислять как ближайшую точку к кластерам
+//а не перебирать по всем точкам
 bool isPositionInCluster(int index, Cluster cluster)
 {
     for(int i = 0; i < cluster.pointsCount; i++)
@@ -84,6 +85,24 @@ bool isPositionInCluster(int index, Cluster cluster)
     }
 
     return false;
+}
+
+uint getNumberClusterWithColor(Cluster* clusters, int cntClusters, RGB_format color)
+{
+    float min = length_M(color,clusters[0].center);
+    uint numNearestCluster = 0;
+    int len;
+    for(int i = 1; i < cntClusters; i++)
+    {
+        len = length_M(color,clusters[i].center);
+        if(len < min)
+        {
+            min = len;
+            numNearestCluster = i;
+        }
+    }
+
+    return 0;
 }
 
 void Kmeans(unsigned char *mask, RGB_format *image, int height, int width)
@@ -190,63 +209,96 @@ void setBinarizedImage(uint8_t *mask, QImage *img)
                 img->setPixel(x,y,0xFFFFFF);
         }
 }
-static WebCam *m_ui;
-static bool lockCamera = true;
-//начало алгоритма
-//может получать не буфер, а массив байтов в rgb?
-//тогда преобразование можно начать вести отсюда
+
 void GestureRecognition::thresholdColorConversion(ImageBuffer *buffer)
 {
-    if(lockCamera == true)
-        lockCamera = false;
-    else
-        return;
-    //RGB_format *image = buffer->getRgb();
 
-    QImage img((unsigned char*)buffer->imageRgb,buffer->width,buffer->height,QImage::Format_RGB888);
+#if 0
+
+    QImage img((unsigned char*)buffer->image,buffer->width,buffer->height,QImage::Format_RGB888);
 
     unsigned char *mask = (unsigned char*)malloc(sizeof(unsigned char) * buffer->width * buffer->height);
 
     //можно посмотреть другие форматы изображений
     QImage outImage(buffer->width,buffer->height,QImage::Format_RGB32);
     //setMaskForSkinColorCluster(mask,img);
-    Kmeans(mask,buffer->imageRgb,buffer->width,buffer->height);
+    Kmeans(mask,buffer->image,buffer->width,buffer->height);
     setBinarizedImage(mask, &outImage);
         m_ui->setImage(outImage);
     outImage.save("out.jpg", "JPG");
 
-        free(mask);
-        releaseImageBuffer(buffer);
-
-    lockCamera = true;
+    free(mask);
+#endif
 }
 
-void test()
+GestureRecognition::GestureRecognition() : QObject()
 {
-    QImage image("test4.jpg", "JPG");
-    int width = image.width();
-    int height = image.height();
+    m_context = new OpenclContext();
+    m_camera = nullptr;
+    m_image = nullptr;
+    m_backgroundMask = nullptr;
+    m_mask = nullptr;
 
-    unsigned char *mask = (unsigned char*)malloc(sizeof (unsigned char) * width * height);
-    QImage outImage(width,height,QImage::Format_RGB32);
-    setMaskForSkinColorCluster(mask,image);
-    setBinarizedImage(mask, &outImage);
-    outImage.save("out4.jpg", "JPG");
 }
-
-
-GestureRecognition::GestureRecognition()
+GestureRecognition::~GestureRecognition()
 {
+    if(m_context)
+        delete m_context;
+    m_context = nullptr;
 
+    if(m_camera)
+        delete m_camera;
+    m_camera = nullptr;
 }
 void GestureRecognition::startGR()
 {
     QCameraInfo camerainfo = QCameraInfo::defaultCamera();
     m_camera = new Camera();
     m_camera->setCamera(camerainfo);
-    m_camera->Callback = thresholdColorConversion;
     m_camera->start();
+    connect(m_camera, &CameraHandler::callbackFrame, this, &GestureRecognition::onUpdateFrame);
+
+    //init IPImage with width, height and PixelData
 }
+
+void GestureRecognition::onUpdateFrame(QImage frame)
+{
+    IPError error;
+
+    int width = frame.width();
+    int height = frame.height();
+    if(!m_image)
+    {
+        // first frame
+        m_image = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
+        m_backgroundMask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
+        m_mask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
+    }
+    else
+    {
+        m_image->WriteImage((unsigned char*)frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+    }
+#if 1
+
+
+    error = m_context->ColorThresholdConversion(m_image, m_mask);
+    if(error != IPNoError)
+        qDebug() << "ColorThresholdConversion error";
+    //...
+
+
+    //m_image->ReadImage(frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+    if(m_mask->GetPixelType() == PixelType::Grayscale8)
+    {
+        QImage img(width, height, QImage::Format_Grayscale8);
+        m_mask->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
+        m_ui->setImage(img);
+    }
+#endif
+
+    //m_ui->setImage(frame);
+}
+
 void GestureRecognition::setUI(WebCam *ui)
 {
     m_ui = ui;

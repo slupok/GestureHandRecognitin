@@ -10,13 +10,15 @@
 
 class GestureRecognition;
 
-class CameraHandler
+class CameraHandler : public QObject
 {
+    Q_OBJECT
 public:
     virtual void start() = 0;
     virtual void stop() = 0;
     virtual void setCamera(QCameraInfo cameraInfo) = 0;
-    std::function<void (ImageBuffer *buffer)> Callback ;
+signals:
+    void callbackFrame(QImage frame);
 
 };
 
@@ -26,16 +28,15 @@ public:
     Camera();
     ~Camera();
 
-    void capture(QImage);
-    void start();
-    void stop();
-    void setCamera(QCameraInfo cameraInfo);
+    void capture(QImage) override;
+    void start() override;
+    void stop() override ;
+    void setCamera(QCameraInfo cameraInfo) override;
 
 private:
-    QImage *m_image;
     QCamera *m_camera;
     BasedVideoSurface *m_surface;
-    //ImageBuffer *m_buffer;
+
 
 };
 
