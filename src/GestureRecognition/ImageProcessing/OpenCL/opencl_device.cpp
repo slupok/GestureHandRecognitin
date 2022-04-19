@@ -84,11 +84,18 @@ bool OpenclDevice::CreateProgram(char *source, size_t sourceSize)
     m_testKernel = clCreateKernel(m_imageProgram, "test", &error);
     if(error != 0)
         return false;
-#if 0
-    m_kMeansKernel = clCreateKernel(m_imageProgram, "kMeansKernel", &error);
+
+    m_morphologicalDilationKernel = clCreateKernel(m_imageProgram, "MorphologicalDilationKernel", &error);
     if(error != 0)
         return false;
-#endif
+
+    m_morphologicalErosionKernel = clCreateKernel(m_imageProgram, "MorphologicalErosionKernel", &error);
+    if(error != 0)
+        return false;
+
+    m_separableGaussianBlurKernel = clCreateKernel(m_imageProgram, "SeparableGaussianBlurKernel", &error);
+    if(error != 0)
+        return false;
 
     m_thresholdColorKernel = clCreateKernel(m_imageProgram, "thresholdColorConversionKernel", &error);
     if(error != 0)

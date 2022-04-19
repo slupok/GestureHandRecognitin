@@ -40,7 +40,7 @@ bool BasedVideoSurface::present(const QVideoFrame &frame)
         image = image.transformed(QTransform().scale(-1,1).translate(0, image.width()));
     tmpFrame.unmap();
 
-    //лучше передавать биты, тогда нужно битовое представление тоже отзеркалить
+    //мб лучше передавать сразу биты/размер/тип?
     m_surfaceCaptured->capture(image);
     return true;
 }

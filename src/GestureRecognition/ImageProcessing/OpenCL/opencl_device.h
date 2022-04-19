@@ -23,9 +23,12 @@ public:
     //queue
     //int device;
     cl_program m_imageProgram;
-    cl_kernel m_testKernel;
-    cl_kernel m_kMeansKernel;
+    cl_kernel m_testKernel;//del
+    cl_kernel m_kMeansKernel;//del
     cl_kernel m_thresholdColorKernel;
+    cl_kernel m_separableGaussianBlurKernel;
+    cl_kernel m_morphologicalErosionKernel;
+    cl_kernel m_morphologicalDilationKernel;
 };
 
 #endif //GESTURE_CL_H

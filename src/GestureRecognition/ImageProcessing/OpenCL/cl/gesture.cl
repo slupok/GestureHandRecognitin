@@ -1,3 +1,14 @@
+
+typedef enum PixelType
+{
+    Undefined,
+    Grayscale8,
+    Float32,
+    RGB24,
+    BGR24,
+    RGBA32
+} PixelType;
+typedef uchar Grayscale_format;
 typedef struct RGB_format
 {
   unsigned char r,g,b;
@@ -24,6 +35,17 @@ inline YCC_format RGB2YCC_JPEG(RGB_format rgb)
     return color;
 }
 
+inline int RGB2Grayscale(RGB_format rgb)
+{
+    float r = rgb.r / 255.0f;
+    float g = rgb.g / 255.0f;
+    float b = rgb.b / 255.0f;
+
+    float linearColor = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+    return (int)(linearColor * 255.0f);
+    //float grayscale = linearColor <= 0.0031308 ? 12.92 * linearColor : 1.055 * pow(linearColor, 1/2.4f) - 0.055;
+}
+
 
 //Евклидова метрика
 inline float length_E(RGB_format a, RGB_format b)
@@ -36,9 +58,8 @@ inline float length_M(RGB_format a, RGB_format b)
     return ( abs(a.r - b.r) + abs(a.g - b.g) + abs(a.b - b.b));
 }
 
-
-__kernel void thresholdColorConversionKernel(const __global RGB_format *image,
-                                             __global char* mask,
+__kernel void grayscaleColorConversionKernel(const __global RGB_format *image,
+                                             __global char *grayImage,
                                              int width,
                                              int height)
 {
@@ -48,6 +69,25 @@ __kernel void thresholdColorConversionKernel(const __global RGB_format *image,
     if(x >= width || y >= height)
         return;
     int index = x + y * width;
+
+
+    grayImage[index] = RGB2Grayscale(image[index]);
+
+}
+__kernel void thresholdColorConversionKernel(const __global RGB_format *image,
+                                             __global char* mask,
+                                             int width,
+                                             int height)
+{
+    //необходимо учитывать ColorType
+
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if(x >= width || y >= height)
+        return;
+    int index = x + y * width;
+
 
     YCC_format color = RGB2YCC_JPEG(image[index]);
 
@@ -62,6 +102,135 @@ __kernel void thresholdColorConversionKernel(const __global RGB_format *image,
         mask[index] = 0;
     }
 }
+
+__kernel void SeparableGaussianBlurKernel(__global void *image,
+                                          __constant void *baseImage,
+                                          __constant float* filter,
+                                          int radius,
+                                          int isHorizontal,
+                                          int width,
+                                          int height,
+                                          PixelType pixelType)
+{
+
+
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if(x >= width - radius || y >= height - radius || x < radius || y < radius)
+        return;
+    int index = x + y * width;
+
+    float3 acc = {0.0f, 0.0f, 0.0f};
+    int filterDim = radius * 2 + 1;
+    int ix = x, iy = y;
+    float weight;
+
+
+#if 0
+    //separable
+    for(int i = -radius; i <= radius; i++)
+    {
+        if(isHorizontal)
+            ix = x + i;
+        else
+            iy = y + i;
+
+        weight = filter[i + radius];
+        if(pixelType == RGB24)
+        {
+            acc.x += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].r / 255.0f);
+            acc.y += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].g / 255.0f);
+            acc.z += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].b / 255.0f);
+        }
+    }
+#else
+    for(int j = -radius; j <= radius; j++)
+        for(int i = -radius; i <= radius; i++)
+        {
+            ix = x + i;
+            iy = y + i;
+            weight = filter[(i+radius) + filterDim * (j+radius)];
+            if(pixelType == RGB24)
+            {
+                acc.x += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].r / 255.0f);
+                acc.y += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].g / 255.0f);
+                acc.z += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].b / 255.0f);
+            }
+        }
+#endif
+
+    if(pixelType == RGB24)
+    {
+        //?
+        //((RGB_format*)image)[index] = {(int)(acc.x * 255.0f), (int)(acc.y * 255.0f), (int)(acc.z * 255.0f)};
+        ((__global RGB_format*)image)[index].r = (int)(acc.x * 255.0f);
+        ((__global RGB_format*)image)[index].g = (int)(acc.y * 255.0f);
+        ((__global RGB_format*)image)[index].b = (int)(acc.z * 255.0f);
+    }
+
+#if 0
+    for(int j = 0; j < radius; j++)
+        for(int i = 0; i < radius; i++)
+        {
+            jy = y + j - r;
+            ix = x + i - r;
+            weight = filter[i + filterDim * j];
+            if(pixelType == RGB24)
+            {
+                acc.x += weight * ((RGB_format*)baseImage)[ix + width * jy].x
+            }
+        }
+#endif
+}
+
+__kernel void MorphologicalErosionKernel(__global uchar *image,
+                                         __constant uchar *baseImage,
+                                         int radius,
+                                         int width,
+                                         int height)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if(x >= width - radius || y >= height - radius || x < radius || y < radius)
+        return;
+    int index = x + y * width;
+
+    if(baseImage[index] != 255)
+            return;
+
+    for(int iy = -radius; iy <= radius; iy++)
+        for(int ix = -radius; ix <= radius; ix++)
+        {
+            image[(x+ix) + (y+iy) * width] = 255;
+        }
+
+}
+
+__kernel void MorphologicalDilationKernel(__global uchar *image,
+                                          __constant uchar *baseImage,
+                                          int radius,
+                                          int width,
+                                          int height)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if(x >= width - radius || y >= height - radius || x < radius || y < radius)
+        return;
+    int index = x + y * width;
+
+    if(baseImage[index] != 0)
+            return;
+
+    for(int iy = -radius; iy <= radius; iy++)
+        for(int ix = -radius; ix <= radius; ix++)
+        {
+            image[(x+ix) + (y+iy) * width] = 0;
+        }
+}
+
 
 /*
 typedef struct Cluster{

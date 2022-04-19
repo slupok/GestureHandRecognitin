@@ -29,6 +29,9 @@ public:
     //functions
     IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) override;
     IPError ColorThresholdConversion(IPImage *image, IPImage *resultMask) override;
+    IPError GaussianBlur(IPImage *image, int radius, float sigma) override;
+    IPError MorphologicalDilation(IPImage *image, int radius) override;
+    IPError MorphologicalErosion(IPImage *image, int radius) override;
 
 private:
     //мб создать счетчик ссылок на device, и тогда освобжать его, когда больше нет ссылок?

@@ -4,9 +4,12 @@
 #include "imageProcessing.h"
 #include "ipDevice.h"
 #include "ipImage.h"
-#include "../imageDataBuffer.h"
+#include "../imageDataBuffer.h" //del
 
 #include "OpenCL/opencl_device.h"
+
+#include "math.h"
+
 
 struct IPDevices{
     int openCL;
@@ -34,6 +37,9 @@ public:
     //functions
     virtual IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) = 0;
     virtual IPError ColorThresholdConversion(IPImage *image, IPImage *resultMask) = 0;
+    virtual IPError GaussianBlur(IPImage *image, int radius, float sigma) = 0;
+    virtual IPError MorphologicalDilation(IPImage *image, int radius) = 0;
+    virtual IPError MorphologicalErosion(IPImage *image, int radius) = 0;
 //protected:
   //  IPImage *m_image;
 };

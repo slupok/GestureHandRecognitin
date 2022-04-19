@@ -14,7 +14,8 @@ typedef enum IPError
     IPErrorDevice = 1,
     IPErrorOutOfMemory = 2,
     IPErrorNotSupported = 3,
-    IPErrorMemoryCopy = 4 // ошибка возникающая при неудачном копировании данных (несовпадает размер или тип)
+    IPErrorMemoryCopy = 4, // ошибка возникающая при неудачном копировании данных (несовпадает размер или тип)
+    IPErrorExecute = 5
 
 } IPError;
 

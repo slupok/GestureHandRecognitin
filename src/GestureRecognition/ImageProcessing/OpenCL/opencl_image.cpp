@@ -62,7 +62,7 @@ IPError OpenclImage::GetData(void *data)
     return IPNoError;
 }
 #endif
-IPError OpenclImage::ReadImage(uchar *data, size_t length)
+IPError OpenclImage::ReadImage(void *data, size_t length)
 {
     if(!data || m_width * m_height * IP_GetBytesPerPixel(m_pixelType) != length)
         return CHECK_ERROR(IPErrorOutOfMemory);

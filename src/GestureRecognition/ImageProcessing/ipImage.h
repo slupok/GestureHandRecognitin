@@ -20,7 +20,7 @@ public:
 
     //можно добавить функцию которая заполняем текущий QImage, чтобы каждый раз не создавать новый
     //соответсвенно нужны проверки, чтобы совпадали размеры и colorType
-    virtual IPError ReadImage(uchar *data, size_t length) = 0;
+    virtual IPError ReadImage(void *data, size_t length) = 0;
    // virtual QImage* GetImage() = 0;
     //virtual IPError ReadMask(uchar* mask, int width, int height, PixelType pixelType) = 0;
 protected:

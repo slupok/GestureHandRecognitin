@@ -213,22 +213,7 @@ void setBinarizedImage(uint8_t *mask, QImage *img)
 void GestureRecognition::thresholdColorConversion(ImageBuffer *buffer)
 {
 
-#if 0
 
-    QImage img((unsigned char*)buffer->image,buffer->width,buffer->height,QImage::Format_RGB888);
-
-    unsigned char *mask = (unsigned char*)malloc(sizeof(unsigned char) * buffer->width * buffer->height);
-
-    //можно посмотреть другие форматы изображений
-    QImage outImage(buffer->width,buffer->height,QImage::Format_RGB32);
-    //setMaskForSkinColorCluster(mask,img);
-    Kmeans(mask,buffer->image,buffer->width,buffer->height);
-    setBinarizedImage(mask, &outImage);
-        m_ui->setImage(outImage);
-    outImage.save("out.jpg", "JPG");
-
-    free(mask);
-#endif
 }
 
 GestureRecognition::GestureRecognition() : QObject()
@@ -271,23 +256,32 @@ void GestureRecognition::onUpdateFrame(QImage frame)
     {
         // first frame
         m_image = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
-        m_backgroundMask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
+        m_backgroundMask = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
         m_mask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
     }
     else
     {
         m_image->WriteImage((unsigned char*)frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
     }
-#if 1
 
-
+    error = m_context->GaussianBlur(m_image, 2, 4.0f);
+    if(error != IPNoError)
+        qDebug() << "GaussianBlur error";
     error = m_context->ColorThresholdConversion(m_image, m_mask);
     if(error != IPNoError)
         qDebug() << "ColorThresholdConversion error";
-    //...
 
+    error = m_context->MorphologicalDilation(m_mask, 1);
+    if(error != IPNoError)
+        qDebug() << "MorphologicalDilation error";
+    //Dillatation mask
 
-    //m_image->ReadImage(frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+#if 0
+    QImage img(width, height, QImage::Format_RGB888);
+    m_image->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+    m_ui->setImage(img);
+
+#else
     if(m_mask->GetPixelType() == PixelType::Grayscale8)
     {
         QImage img(width, height, QImage::Format_Grayscale8);
@@ -295,7 +289,6 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         m_ui->setImage(img);
     }
 #endif
-
     //m_ui->setImage(frame);
 }
 

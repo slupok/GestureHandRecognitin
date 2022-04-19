@@ -22,12 +22,7 @@ int main(int argc, char *argv[])
     ui.show();
 
     //покрыть тестами!!!
-#if 0
-    IPContext *ctx = new OpenclContext();
-    if( ctx->GetDeviceType() == IPDeviceOpenCL)
-        qDebug() << "Select OpenCL device";
-    ctx->RunTest();
-#endif
+
 
     GestureRecognition *rg = new GestureRecognition();
     rg->setUI(&ui);

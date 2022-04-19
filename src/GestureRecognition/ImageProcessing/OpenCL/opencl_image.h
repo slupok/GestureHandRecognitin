@@ -17,7 +17,7 @@ public:
     IPEnum GetDeviceType() override;
 
     IPError WriteImage(const void *data, size_t length) override;
-    IPError ReadImage(uchar *data, size_t length) override;
+    IPError ReadImage(void *data, size_t length) override;
     //QImage* GetImage() override;
 
 private:

@@ -12,6 +12,8 @@ OpenclContext::OpenclContext() : IPContext()
 OpenclContext::~OpenclContext()
 {
     delete m_device;
+    //очереди еще хранятся в openclImage и как с ними быть?
+    //выносить операции из IPImage в IPContext? такие как Read/Write
     clReleaseCommandQueue(m_queue);
 }
 
@@ -137,6 +139,162 @@ IPError OpenclContext::ColorThresholdConversion(IPImage *image, IPImage *resultM
 
     return IPNoError;
 }
+
+IPError OpenclContext::GaussianBlur(IPImage *image, int radius, float sigma)
+{
+    cl_int errorCode;
+
+    OpenclImage *clImage = dynamic_cast<OpenclImage*>(image);
+    size_t width = clImage->GetWidth();
+    size_t height = clImage->GetHeight();
+
+    size_t gridSize[2] = {(1 + (width - 1) / 256) * 256, (1 + (height - 1) / 256) * 256};
+    size_t threadsPerBlock[2] = {16, 16};
+    int arg = 0;
+
+    size_t length = width * height * GetBytesPerPixel(clImage->GetPixelType());
+    cl_mem tmp_image = clCreateBuffer(m_device->m_context, CL_MEM_READ_WRITE, length, 0x0, &errorCode);
+    if(!tmp_image)
+        return IPErrorOutOfMemory;
+    clEnqueueCopyBuffer(m_queue, clImage->m_image, tmp_image, 0, 0,length, 0, 0x0, 0x0);
+
+    int isHorizontal;
+
+    int kDim = radius * 2 + 1;
+    float *filter = (float*)malloc(kDim  * kDim * sizeof(float));
+    float sum = 0.0;
+    int index = 0;
+    for (int y = 0; y < kDim; y++)
+        for (int x = 0; x < kDim; x++)
+        {
+            index = x + kDim * y;
+            filter[index] = exp( -0.5 * (pow((x-radius)/sigma, 2.0) + pow((y-radius)/sigma,2.0)) )
+                             / (2 * M_PI * sigma * sigma);
+
+            sum += filter[index];
+        }
+    for (int y = 0; y < kDim; y++)
+        for (int x = 0; x < kDim; x++)
+        {
+            index = x + kDim * y;
+            filter[index] /= sum;
+        }
+
+    cl_mem clFilter = clCreateBuffer(m_device->m_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float)*kDim*kDim, filter, &errorCode);
+    if(!clFilter)
+        goto finished;
+
+    isHorizontal = 0;
+    arg = 0;
+    errorCode = clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clImage->m_image);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &tmp_image);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clFilter);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (int), &radius);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (int), &isHorizontal);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (int), &width);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (int), &height);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (PixelType), &clImage->m_pixelType);
+    if(errorCode != 0)
+        goto finished;
+
+    errorCode = clEnqueueNDRangeKernel(m_queue, m_device->m_separableGaussianBlurKernel, 2, 0x0, gridSize, threadsPerBlock, 0, 0x0, 0x0);
+    if(errorCode != 0)
+        goto finished;
+
+    errorCode = clFinish(m_queue);
+    if(errorCode != 0)
+        goto finished;
+
+finished:
+    if(filter)
+        free(filter);
+    if(tmp_image)
+        clReleaseMemObject(tmp_image);
+    if(clFilter)
+        clReleaseMemObject(clFilter);
+    return errorCode == 0 ? IPNoError : IPErrorExecute;
+}
+
+IPError OpenclContext::MorphologicalDilation(IPImage *image, int radius)
+{
+    cl_int errorCode;
+
+    OpenclImage *clImage = dynamic_cast<OpenclImage*>(image);
+    size_t width = clImage->GetWidth();
+    size_t height = clImage->GetHeight();
+
+    size_t length = width * height * GetBytesPerPixel(clImage->GetPixelType());
+    cl_mem tmp_image = clCreateBuffer(m_device->m_context, CL_MEM_READ_WRITE, length, 0x0, &errorCode);
+    if(!tmp_image)
+        return IPErrorOutOfMemory;
+    clEnqueueCopyBuffer(m_queue, clImage->m_image, tmp_image, 0, 0,length, 0, 0x0, 0x0);
+
+    size_t gridSize[2] = {(1 + (width - 1) / 256) * 256, (1 + (height - 1) / 256) * 256};
+    size_t threadsPerBlock[2] = {16, 16};
+    int arg = 0;
+    errorCode = clSetKernelArg(m_device->m_morphologicalDilationKernel, arg++, sizeof (cl_mem), &clImage->m_image);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalDilationKernel, arg++, sizeof (cl_mem), &tmp_image);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalDilationKernel, arg++, sizeof (int), &radius);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalDilationKernel, arg++, sizeof (int), &width);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalDilationKernel, arg++, sizeof (int), &height);
+    //errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (PixelType), &clImage->m_pixelType);
+    if(errorCode != 0)
+        goto finished;
+
+    errorCode = clEnqueueNDRangeKernel(m_queue, m_device->m_morphologicalDilationKernel, 2, 0x0, gridSize, threadsPerBlock, 0, 0x0, 0x0);
+    if(errorCode != 0)
+        goto finished;
+
+    errorCode = clFinish(m_queue);
+    if(errorCode != 0)
+        goto finished;
+
+finished:
+    if(tmp_image)
+        clReleaseMemObject(tmp_image);
+    return errorCode == 0 ? IPNoError : IPErrorExecute;
+}
+IPError OpenclContext::MorphologicalErosion(IPImage *image, int radius)
+{
+
+    cl_int errorCode;
+
+    OpenclImage *clImage = dynamic_cast<OpenclImage*>(image);
+    size_t width = clImage->GetWidth();
+    size_t height = clImage->GetHeight();
+
+    size_t length = width * height * GetBytesPerPixel(clImage->GetPixelType());
+    cl_mem tmp_image = clCreateBuffer(m_device->m_context, CL_MEM_READ_WRITE, length, 0x0, &errorCode);
+    if(!tmp_image)
+        return IPErrorOutOfMemory;
+    clEnqueueCopyBuffer(m_queue, clImage->m_image, tmp_image, 0, 0,length, 0, 0x0, 0x0);
+
+    size_t gridSize[2] = {(1 + (width - 1) / 256) * 256, (1 + (height - 1) / 256) * 256};
+    size_t threadsPerBlock[2] = {16, 16};
+    int arg = 0;
+    errorCode = clSetKernelArg(m_device->m_morphologicalErosionKernel, arg++, sizeof (cl_mem), &clImage->m_image);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalErosionKernel, arg++, sizeof (cl_mem), &tmp_image);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalErosionKernel, arg++, sizeof (int), &radius);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalErosionKernel, arg++, sizeof (int), &width);
+    errorCode |= clSetKernelArg(m_device->m_morphologicalErosionKernel, arg++, sizeof (int), &height);
+    //добавить передачу pixelType
+    if(errorCode != 0)
+        goto finished;
+
+    errorCode = clEnqueueNDRangeKernel(m_queue, m_device->m_morphologicalErosionKernel, 2, 0x0, gridSize, threadsPerBlock, 0, 0x0, 0x0);
+    if(errorCode != 0)
+        goto finished;
+
+    errorCode = clFinish(m_queue);
+    if(errorCode != 0)
+        goto finished;
+
+finished:
+    if(tmp_image)
+        clReleaseMemObject(tmp_image);
+    return errorCode == 0 ? IPNoError : IPErrorExecute;
+}
+
 void OpenclContext::RunTest()
 {
     cl_int error;

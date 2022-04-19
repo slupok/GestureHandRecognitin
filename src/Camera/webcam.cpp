@@ -17,7 +17,7 @@ void WebCam::setImage(QImage img)
 {
     ui->label->resize(img.size());
     ui->label->setPixmap(QPixmap::fromImage(img));
-
+    ui->label->setScaledContents(true);
     ui->label->update();
 }
 
