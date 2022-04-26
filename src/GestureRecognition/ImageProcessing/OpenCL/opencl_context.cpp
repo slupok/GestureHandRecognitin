@@ -96,6 +96,44 @@ IPError OpenclContext::kMeans(int clustersCount, int iterationsCount, RGB_format
     return IPNoError;
 }
 
+IPError OpenclContext::FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold)
+{
+    cl_int errorCode = 0;
+    OpenclImage *clCurImage = dynamic_cast<OpenclImage*>(currentImage);
+    OpenclImage *clPrevImage = dynamic_cast<OpenclImage*>(previousImage);
+    OpenclImage *clMask = dynamic_cast<OpenclImage*>(resultMask);
+    if(!clPrevImage || !clPrevImage || !clMask)
+        return IPErrorExecute;
+    //мб нужна проверка, что размеры равны
+    size_t width = clCurImage->GetWidth();
+    size_t height = clCurImage->GetHeight();
+
+    size_t gridSize[2] = {(1 + (width - 1) / 256) * 256, (1 + (height - 1) / 256) * 256};
+    size_t threadsPerBlock[2] = {16, 16};
+
+    int arg = 0;
+    errorCode = clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (cl_mem), &clCurImage->m_image);
+    errorCode |= clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (cl_mem), &clPrevImage->m_image);
+    errorCode |= clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (cl_mem), &clMask->m_image);
+    errorCode |= clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (uchar), &theshold);
+    errorCode |= clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (PixelType), &clCurImage->m_pixelType);
+    errorCode |= clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (PixelType), &clPrevImage->m_pixelType);
+    errorCode |= clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (int), &width);
+    errorCode |= clSetKernelArg(m_device->m_frameDifferenceKernel, arg++, sizeof (int), &height);
+    if(errorCode != 0)
+        return IPErrorExecute;
+
+    errorCode = clEnqueueNDRangeKernel(m_queue, m_device->m_frameDifferenceKernel, 2, 0x0, gridSize, threadsPerBlock, 0, 0x0, 0x0);
+    if(errorCode != 0)
+        return IPErrorExecute;
+
+    errorCode = clFinish(m_queue);
+    if(errorCode != 0)
+        return IPErrorExecute;
+
+    return errorCode == 0 ? IPNoError : IPErrorExecute;
+}
+
 IPError OpenclContext::ColorThresholdConversion(IPImage *image, IPImage *resultMask)
 {
     if(image->GetPixelType() != PixelType::RGB24 || resultMask->GetPixelType() != PixelType::Grayscale8)
@@ -140,11 +178,12 @@ IPError OpenclContext::ColorThresholdConversion(IPImage *image, IPImage *resultM
     return IPNoError;
 }
 
-IPError OpenclContext::GaussianBlur(IPImage *image, int radius, float sigma)
+IPError OpenclContext::GaussianBlur(IPImage *image, IPImage *mask, int radius, float sigma)
 {
     cl_int errorCode;
 
     OpenclImage *clImage = dynamic_cast<OpenclImage*>(image);
+    OpenclImage *clMask = dynamic_cast<OpenclImage*>(mask);
     size_t width = clImage->GetWidth();
     size_t height = clImage->GetHeight();
 
@@ -186,7 +225,8 @@ IPError OpenclContext::GaussianBlur(IPImage *image, int radius, float sigma)
 
     isHorizontal = 0;
     arg = 0;
-    errorCode = clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clImage->m_image);
+    errorCode = clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clMask->m_image);
+    errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clImage->m_image);
     errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &tmp_image);
     errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clFilter);
     errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (int), &radius);

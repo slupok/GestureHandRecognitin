@@ -25,6 +25,7 @@ public:
     cl_program m_imageProgram;
     cl_kernel m_testKernel;//del
     cl_kernel m_kMeansKernel;//del
+    cl_kernel m_frameDifferenceKernel;
     cl_kernel m_thresholdColorKernel;
     cl_kernel m_separableGaussianBlurKernel;
     cl_kernel m_morphologicalErosionKernel;

@@ -85,6 +85,14 @@ bool OpenclDevice::CreateProgram(char *source, size_t sourceSize)
     if(error != 0)
         return false;
 
+    m_frameDifferenceKernel = clCreateKernel(m_imageProgram, "FrameDifferenceKernel", &error);
+    if(error != 0)
+        return false;
+
+    m_thresholdColorKernel = clCreateKernel(m_imageProgram, "thresholdColorConversionKernel", &error);
+    if(error != 0)
+        return false;
+
     m_morphologicalDilationKernel = clCreateKernel(m_imageProgram, "MorphologicalDilationKernel", &error);
     if(error != 0)
         return false;
@@ -94,10 +102,6 @@ bool OpenclDevice::CreateProgram(char *source, size_t sourceSize)
         return false;
 
     m_separableGaussianBlurKernel = clCreateKernel(m_imageProgram, "SeparableGaussianBlurKernel", &error);
-    if(error != 0)
-        return false;
-
-    m_thresholdColorKernel = clCreateKernel(m_imageProgram, "thresholdColorConversionKernel", &error);
     if(error != 0)
         return false;
     //kMeansKernel

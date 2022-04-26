@@ -74,6 +74,39 @@ __kernel void grayscaleColorConversionKernel(const __global RGB_format *image,
     grayImage[index] = RGB2Grayscale(image[index]);
 
 }
+
+__kernel void FrameDifferenceKernel(__constant void *currentImage,
+                                    __constant void *previousImage,
+                                    __global uchar *resultMask,
+                                    uchar threshold,
+                                    PixelType curPixelType,
+                                    PixelType prevPixelType,
+                                    int width,
+                                    int height)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if(x >= width || y >= height)
+        return;
+    int index = x + y * width;
+
+    int currentColor;// = RGB2Grayscale(currentImage[index]);
+    int previousColor;// = RGB2Grayscale(previousImage[index]);;
+
+    if(curPixelType == RGB24)
+    {
+        currentColor = RGB2Grayscale(((__constant RGB_format*)currentImage)[index]);
+    }
+    if(prevPixelType == RGB24)
+    {
+        previousColor = RGB2Grayscale(((__constant RGB_format*)previousImage)[index]);
+    }
+
+    resultMask[index] = abs(currentColor - previousColor) < threshold ? 0 : 255;
+
+}
+
 __kernel void thresholdColorConversionKernel(const __global RGB_format *image,
                                              __global char* mask,
                                              int width,
@@ -88,6 +121,8 @@ __kernel void thresholdColorConversionKernel(const __global RGB_format *image,
         return;
     int index = x + y * width;
 
+    if(mask[index] == 0)
+        return;
 
     YCC_format color = RGB2YCC_JPEG(image[index]);
 
@@ -103,7 +138,8 @@ __kernel void thresholdColorConversionKernel(const __global RGB_format *image,
     }
 }
 
-__kernel void SeparableGaussianBlurKernel(__global void *image,
+__kernel void SeparableGaussianBlurKernel(__constant uchar *visibleMask,
+                                          __global void *image,
                                           __constant void *baseImage,
                                           __constant float* filter,
                                           int radius,
@@ -120,6 +156,9 @@ __kernel void SeparableGaussianBlurKernel(__global void *image,
     if(x >= width - radius || y >= height - radius || x < radius || y < radius)
         return;
     int index = x + y * width;
+
+    if(visibleMask[index] == 0)
+        return;
 
     float3 acc = {0.0f, 0.0f, 0.0f};
     int filterDim = radius * 2 + 1;

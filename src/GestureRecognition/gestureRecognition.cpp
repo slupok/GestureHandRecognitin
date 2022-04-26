@@ -252,11 +252,17 @@ void GestureRecognition::onUpdateFrame(QImage frame)
 
     int width = frame.width();
     int height = frame.height();
+    if(cntFrame <= 40 )
+    {
+        cntFrame++;
+        return;
+    }
     if(!m_image)
     {
         // first frame
         m_image = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
         m_backgroundMask = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
+
         m_mask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
     }
     else
@@ -264,17 +270,27 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         m_image->WriteImage((unsigned char*)frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
     }
 
-    error = m_context->GaussianBlur(m_image, 2, 4.0f);
+
+    error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 7);
     if(error != IPNoError)
         qDebug() << "GaussianBlur error";
+
+
+
+    error = m_context->MorphologicalDilation(m_mask, 4);
+    error = m_context->MorphologicalErosion(m_mask, 3);
+
+    error = m_context->GaussianBlur(m_image, m_mask, 2, 4.0f);
+    if(error != IPNoError)
+        qDebug() << "GaussianBlur error";
+
     error = m_context->ColorThresholdConversion(m_image, m_mask);
     if(error != IPNoError)
         qDebug() << "ColorThresholdConversion error";
 
     error = m_context->MorphologicalDilation(m_mask, 1);
-    if(error != IPNoError)
-        qDebug() << "MorphologicalDilation error";
-    //Dillatation mask
+    //if(error != IPNoError)
+        //qDebug() << "MorphologicalDilation error";
 
 #if 0
     QImage img(width, height, QImage::Format_RGB888);

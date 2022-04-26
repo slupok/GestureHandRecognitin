@@ -30,6 +30,7 @@ private:
     Camera *m_camera;
     IPContext *m_context;
 
+    int cntFrame = 0;//костыль
     IPImage *m_image;
     IPImage *m_backgroundMask;
     IPImage *m_mask;
