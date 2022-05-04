@@ -13,61 +13,6 @@ float length_M(RGB_format a, RGB_format b)
     return ( abs(a.r - b.r) + abs(a.g - b.g) + abs(a.b - b.b));
 }
 
-void setMaskForSkinColorCluster(unsigned char *mask, const QImage image)
-{
-    int width = image.width();
-    int height = image.height();
-    QRgb rgb;
-
-    HSV_format min_HSV = {0.0f,45.0f/255.0f,0.0f};
-    HSV_format max_HSV = {20.0f,255.0f/255.0f,255.0f/255.0f};
-
-    YCC_format YCCcolor;
-    RGB_format RGBcolor;
-    HSV_format HSVcolor;
-    int i = 0;
-    for(int y = 0; y < height; y++)
-        for(int x = 0; x < width; x++)
-        {
-            i = y * width + x;
-
-
-
-            rgb = image.pixel(x,y);
-            RGBcolor = {(unsigned char)qRed(rgb),
-                        (unsigned char)qGreen(rgb),
-                        (unsigned char)qBlue(rgb)};
-            YCCcolor = RGB2YCC_JPEG(RGBcolor);
-            HSVcolor = RGB2HSV(RGBcolor);
-
-
-            if(min_HSV.H <= HSVcolor.H && HSVcolor.H <= max_HSV.H &&
-               min_HSV.S <= HSVcolor.S && HSVcolor.S <= max_HSV.S &&
-               min_HSV.V <= HSVcolor.V && HSVcolor.V <= max_HSV.V)
-            {
-                mask[i] = 1;
-            }
-            else
-                mask[i] = 0;
-
-
-#if 0
-            //цветовой кластер кожи человека
-            if(25 <= YCCcolor.Y && YCCcolor.Y < 220
-                    && 100 <= YCCcolor.Cb && YCCcolor.Cb < 130
-                    && 140 <= YCCcolor.Cr && YCCcolor.Cr < 190)
-            {
-                mask[i] = 1;
-            }
-            else
-            {
-                mask[i] = 0;
-            }
-#endif
-
-        }
-}
-
 typedef struct Cluster{
     RGB_format center;
     int *positions;//хранит индексы
@@ -223,6 +168,7 @@ GestureRecognition::GestureRecognition() : QObject()
     m_image = nullptr;
     m_backgroundMask = nullptr;
     m_mask = nullptr;
+    m_block = false;
 
 }
 GestureRecognition::~GestureRecognition()
@@ -245,16 +191,21 @@ void GestureRecognition::startGR()
 
     //init IPImage with width, height and PixelData
 }
-
+static bool m_block_ = false;
 void GestureRecognition::onUpdateFrame(QImage frame)
 {
+    if(m_block_)
+        return;
+    m_block_ = true;
+
     IPError error;
 
     int width = frame.width();
     int height = frame.height();
-    if(cntFrame <= 40 )
+    if(cntFrame <= 70 )
     {
         cntFrame++;
+        m_block_ = false;
         return;
     }
     if(!m_image)
@@ -262,7 +213,7 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         // first frame
         m_image = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
         m_backgroundMask = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
-
+        error = m_context->GaussianBlur(m_backgroundMask, 2, 4.0f);
         m_mask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
     }
     else
@@ -270,28 +221,16 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         m_image->WriteImage((unsigned char*)frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
     }
 
-
+    //с дилатацией и эрозией напутал, дилатация - расширяет, эрозия - уменьшает.
+    error = m_context->GaussianBlur(m_image, 2, 4.0f);
     error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 7);
-    if(error != IPNoError)
-        qDebug() << "GaussianBlur error";
-
-
-
-    error = m_context->MorphologicalDilation(m_mask, 4);
-    error = m_context->MorphologicalErosion(m_mask, 3);
-
-    error = m_context->GaussianBlur(m_image, m_mask, 2, 4.0f);
-    if(error != IPNoError)
-        qDebug() << "GaussianBlur error";
-
+    error = m_context->MorphologicalDilation(m_mask, 3);
+    error = m_context->MorphologicalErosion(m_mask, 2);
     error = m_context->ColorThresholdConversion(m_image, m_mask);
-    if(error != IPNoError)
-        qDebug() << "ColorThresholdConversion error";
-
-    error = m_context->MorphologicalDilation(m_mask, 1);
-    //if(error != IPNoError)
-        //qDebug() << "MorphologicalDilation error";
-
+    error = m_context->MorphologicalDilation(m_mask, 2);
+    int x = 0;
+    int y = 0;
+    error = m_context->CenterOfBitmap(m_mask, x, y);
 #if 0
     QImage img(width, height, QImage::Format_RGB888);
     m_image->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
@@ -304,7 +243,10 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         m_mask->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
         m_ui->setImage(img);
     }
+    m_ui->setTmpImage(frame);
+
 #endif
+    m_block_ = false;
     //m_ui->setImage(frame);
 }
 

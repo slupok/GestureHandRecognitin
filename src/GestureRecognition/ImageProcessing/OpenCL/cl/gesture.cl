@@ -138,7 +138,7 @@ __kernel void thresholdColorConversionKernel(const __global RGB_format *image,
     }
 }
 
-__kernel void SeparableGaussianBlurKernel(__constant uchar *visibleMask,
+__kernel void SeparableGaussianBlurKernel(
                                           __global void *image,
                                           __constant void *baseImage,
                                           __constant float* filter,
@@ -156,9 +156,6 @@ __kernel void SeparableGaussianBlurKernel(__constant uchar *visibleMask,
     if(x >= width - radius || y >= height - radius || x < radius || y < radius)
         return;
     int index = x + y * width;
-
-    if(visibleMask[index] == 0)
-        return;
 
     float3 acc = {0.0f, 0.0f, 0.0f};
     int filterDim = radius * 2 + 1;
@@ -268,6 +265,54 @@ __kernel void MorphologicalDilationKernel(__global uchar *image,
         {
             image[(x+ix) + (y+iy) * width] = 0;
         }
+}
+
+__kernel void CoordinateSummingKernel(__constant uchar *image,
+                                      __local uint *localSum,
+                                      __global uint *resultSum,
+                                      __local uint *localCount,
+                                      __global uint *resultCount,
+                                      int width,
+                                      int height)
+{
+    int globalId = get_global_id(0);
+    int localSize = get_local_size(0);
+    int localId = get_local_id(0);
+
+    if(globalId >= width * height /*|| image[globalId] == 0*/)
+    {
+        localCount[localId] = 0;
+        localSum[localId] = 0;
+    }
+    else
+    {
+        localCount[localId] = 1;
+        localSum[localId] = globalId;
+    }
+    int y;
+    int x;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for(int i = localSize >> 1; i > 0; i >>= 1)
+    {
+        if(localId < i)
+        {
+            y = localSum[localId] / width;
+            x = localSum[localId] % width;
+            y += localSum[localId + i] / width;
+            x += localSum[localId + i] % width;
+            localSum[localId] = x + width * y;
+
+            localCount[localId] += localCount[localId + i];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    if(localId == 0)
+    {
+        resultCount[get_group_id(0)] = localCount[0];
+        resultSum[get_group_id(0)] = localSum[0];
+    }
 }
 
 

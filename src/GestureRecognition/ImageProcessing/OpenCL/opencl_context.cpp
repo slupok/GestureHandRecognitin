@@ -178,12 +178,11 @@ IPError OpenclContext::ColorThresholdConversion(IPImage *image, IPImage *resultM
     return IPNoError;
 }
 
-IPError OpenclContext::GaussianBlur(IPImage *image, IPImage *mask, int radius, float sigma)
+IPError OpenclContext::GaussianBlur(IPImage *image, int radius, float sigma)
 {
     cl_int errorCode;
 
     OpenclImage *clImage = dynamic_cast<OpenclImage*>(image);
-    OpenclImage *clMask = dynamic_cast<OpenclImage*>(mask);
     size_t width = clImage->GetWidth();
     size_t height = clImage->GetHeight();
 
@@ -225,7 +224,6 @@ IPError OpenclContext::GaussianBlur(IPImage *image, IPImage *mask, int radius, f
 
     isHorizontal = 0;
     arg = 0;
-    errorCode = clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clMask->m_image);
     errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clImage->m_image);
     errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &tmp_image);
     errorCode |= clSetKernelArg(m_device->m_separableGaussianBlurKernel, arg++, sizeof (cl_mem), &clFilter);
@@ -332,6 +330,85 @@ IPError OpenclContext::MorphologicalErosion(IPImage *image, int radius)
 finished:
     if(tmp_image)
         clReleaseMemObject(tmp_image);
+    return errorCode == 0 ? IPNoError : IPErrorExecute;
+}
+
+IPError OpenclContext::CenterOfBitmap(IPImage *mask, int &x, int &y)
+{
+    cl_int errorCode = 0;
+    int arg = 0;
+
+    OpenclImage *clMask = dynamic_cast<OpenclImage*>(mask);
+    if(!clMask)
+        return IPErrorExecute;
+    int width = 100;//clMask->GetWidth();
+    int height = 100;//clMask->GetHeight();
+    int imageSize = width * height;
+
+    cl_kernel kernel = m_device->m_coordinateSummingKernel;
+
+    int rank = (int)(log2(imageSize)) + 1;
+    size_t gridSize = pow(2, rank) > 256 ? pow(2, rank) : 256;//(1 + ((width * height * 2) - 1) / 256) * 256;//в 2 раза будет достаточно
+    size_t threadsPerBlock = 256;
+    qDebug() << gridSize;
+    int numBlock = gridSize / threadsPerBlock;
+
+    uint count = 0;
+    uint *partialCount = nullptr;
+    uint *partialSum = nullptr;
+
+    cl_mem resultSum = clCreateBuffer(m_device->m_context, CL_MEM_READ_ONLY, sizeof(uint) * numBlock, 0x0, &errorCode);
+    cl_mem resultCount = clCreateBuffer(m_device->m_context, CL_MEM_READ_ONLY, sizeof(uint) * numBlock, 0x0, &errorCode);
+    if(!resultSum || !resultCount)
+        goto finish;
+
+    arg = 0;
+    errorCode = clSetKernelArg(kernel, arg++, sizeof (cl_mem), &clMask->m_image);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof(uint) * threadsPerBlock, nullptr);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (cl_mem), &resultSum);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof(uint) * threadsPerBlock, nullptr);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (cl_mem), &resultCount);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (int), &width);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (int), &height);
+    if(errorCode != 0)
+        goto finish;
+
+    errorCode = clEnqueueNDRangeKernel(m_queue, kernel, 1, 0x0, &gridSize, &threadsPerBlock, 0, 0x0, 0x0);
+    if(errorCode != 0)
+        goto finish;
+
+    errorCode = clFinish(m_queue);
+    if(errorCode != 0)
+        goto finish;
+
+    partialCount = (uint*)malloc(numBlock * sizeof (uint));
+    partialSum = (uint*)malloc(numBlock * sizeof (uint));
+
+    clEnqueueReadBuffer(m_queue, resultCount, CL_TRUE, 0, numBlock * sizeof (uint), partialCount, 0, 0x0, 0x0);
+    clEnqueueReadBuffer(m_queue, resultSum, CL_TRUE, 0, numBlock * sizeof (uint), partialSum, 0, 0x0, 0x0);
+
+    count = 0;
+    x = 0;
+    y = 0;
+    for(int i = 0; i < numBlock; i++)
+    {
+        count += partialCount[i];
+        x += (partialSum[i] % width) / partialCount[i];
+        y += (partialSum[i] / width) / partialCount[i];
+    }
+    qDebug() << count << " = " << width * height;
+    qDebug() << x << " = " <<  x;
+    qDebug() << y << " = " <<  y;
+
+finish:
+    if(partialCount)
+        free(partialCount);
+    if(partialSum)
+        free(partialSum);
+    if(resultSum)
+        clReleaseMemObject(resultSum);
+    if(resultCount)
+        clReleaseMemObject(resultCount);
     return errorCode == 0 ? IPNoError : IPErrorExecute;
 }
 

@@ -38,9 +38,10 @@ public:
     virtual IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) = 0;
     virtual IPError FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold) = 0;
     virtual IPError ColorThresholdConversion(IPImage *image, IPImage *resultMask) = 0;
-    virtual IPError GaussianBlur(IPImage *image, IPImage *mask, int radius, float sigma) = 0;
+    virtual IPError GaussianBlur(IPImage *image, int radius, float sigma) = 0;
     virtual IPError MorphologicalDilation(IPImage *image, int radius) = 0;
     virtual IPError MorphologicalErosion(IPImage *image, int radius) = 0;
+    virtual IPError CenterOfBitmap(IPImage *mask, int &x, int &y) = 0;
 //protected:
   //  IPImage *m_image;
 };

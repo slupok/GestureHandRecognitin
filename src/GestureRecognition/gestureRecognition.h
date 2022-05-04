@@ -21,7 +21,6 @@ public:
     void startGR();
     void setUI(WebCam *ui);
 
-
 public slots:
     void onUpdateFrame(QImage frame);
 
@@ -30,6 +29,7 @@ private:
     Camera *m_camera;
     IPContext *m_context;
 
+    bool m_block;
     int cntFrame = 0;//костыль
     IPImage *m_image;
     IPImage *m_backgroundMask;

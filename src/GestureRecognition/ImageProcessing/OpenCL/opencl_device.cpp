@@ -104,6 +104,10 @@ bool OpenclDevice::CreateProgram(char *source, size_t sourceSize)
     m_separableGaussianBlurKernel = clCreateKernel(m_imageProgram, "SeparableGaussianBlurKernel", &error);
     if(error != 0)
         return false;
+
+    m_coordinateSummingKernel = clCreateKernel(m_imageProgram, "CoordinateSummingKernel", &error);
+    if(error != 0)
+        return false;
     //kMeansKernel
     return true;
 }

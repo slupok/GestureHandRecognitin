@@ -30,6 +30,7 @@ public:
     cl_kernel m_separableGaussianBlurKernel;
     cl_kernel m_morphologicalErosionKernel;
     cl_kernel m_morphologicalDilationKernel;
+    cl_kernel m_coordinateSummingKernel;//CoordinateSummingReductionKernel
 };
 
 #endif //GESTURE_CL_H

@@ -19,6 +19,8 @@ public:
     WebCam(QWidget *parent = nullptr);
     ~WebCam();
     void setImage(QImage img);
+    void setTmpImage(QImage img);
+
 private:
     Ui::WebCam *ui;
 
