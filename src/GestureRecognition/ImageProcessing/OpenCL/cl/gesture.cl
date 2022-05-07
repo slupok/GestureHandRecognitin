@@ -268,41 +268,43 @@ __kernel void MorphologicalDilationKernel(__global uchar *image,
 }
 
 __kernel void CoordinateSummingKernel(__constant uchar *image,
-                                      __local uint *localSum,
-                                      __global uint *resultSum,
+                                      __local uint *xLocalSum,
+                                      __local uint *yLocalSum,
+                                      __global uint *xResult,
+                                      __global uint *yResult,
                                       __local uint *localCount,
                                       __global uint *resultCount,
                                       int width,
                                       int height)
 {
-    int globalId = get_global_id(0);
-    int localSize = get_local_size(0);
-    int localId = get_local_id(0);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    if(globalId >= width * height /*|| image[globalId] == 0*/)
+    int globalId = x + width * y;
+    int localSize = get_local_size(0) * get_local_size(1);
+    int localId = get_local_id(0) + get_local_size(0) * get_local_id(1);
+    int groupId =  get_group_id(0) + get_num_groups(0) * get_group_id(1);
+
+    if(globalId >= width * height || image[globalId] == 0)
     {
         localCount[localId] = 0;
-        localSum[localId] = 0;
+        xLocalSum[localId] = 0;
+        yLocalSum[localId] = 0;
     }
     else
     {
         localCount[localId] = 1;
-        localSum[localId] = globalId;
+        xLocalSum[localId] = x;
+        yLocalSum[localId] = y;
     }
-    int y;
-    int x;
-    barrier(CLK_LOCAL_MEM_FENCE);
 
+    barrier(CLK_LOCAL_MEM_FENCE);
     for(int i = localSize >> 1; i > 0; i >>= 1)
     {
         if(localId < i)
-        {
-            y = localSum[localId] / width;
-            x = localSum[localId] % width;
-            y += localSum[localId + i] / width;
-            x += localSum[localId + i] % width;
-            localSum[localId] = x + width * y;
-
+        {   
+            xLocalSum[localId] += xLocalSum[localId + i];
+            yLocalSum[localId] += yLocalSum[localId + i];
             localCount[localId] += localCount[localId + i];
         }
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -310,8 +312,9 @@ __kernel void CoordinateSummingKernel(__constant uchar *image,
 
     if(localId == 0)
     {
-        resultCount[get_group_id(0)] = localCount[0];
-        resultSum[get_group_id(0)] = localSum[0];
+        resultCount[groupId] = localCount[0];
+        xResult[groupId] = xLocalSum[0];
+        yResult[groupId] = yLocalSum[0];
     }
 }
 

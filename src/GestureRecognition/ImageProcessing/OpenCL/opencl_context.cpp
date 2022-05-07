@@ -81,8 +81,6 @@ IPError OpenclContext::kMeans(int clustersCount, int iterationsCount, RGB_format
         clEnqueueFillBuffer(clImage->m_queue, sum_r_mem, &zeroPattern, sizeof(long), 0, sizeof(long) * clustersCount, 0, 0x0, 0x0);
         clEnqueueFillBuffer(clImage->m_queue, sum_g_mem, &zeroPattern, sizeof(long), 0, sizeof(long) * clustersCount, 0, 0x0, 0x0);
         clEnqueueFillBuffer(clImage->m_queue, sum_b_mem, &zeroPattern, sizeof(long), 0, sizeof(long) * clustersCount, 0, 0x0, 0x0);
-
-
     }
 
 
@@ -341,39 +339,55 @@ IPError OpenclContext::CenterOfBitmap(IPImage *mask, int &x, int &y)
     OpenclImage *clMask = dynamic_cast<OpenclImage*>(mask);
     if(!clMask)
         return IPErrorExecute;
-    int width = 100;//clMask->GetWidth();
-    int height = 100;//clMask->GetHeight();
+    size_t width = clMask->GetWidth();
+    size_t height = clMask->GetHeight();
+
+    int w = width;
+    int h = height;
     int imageSize = width * height;
 
-    cl_kernel kernel = m_device->m_coordinateSummingKernel;
+    float _x = 0;
+    float _y = 0;
 
+    cl_kernel kernel = m_device->m_coordinateSummingKernel;
+#if 0
     int rank = (int)(log2(imageSize)) + 1;
     size_t gridSize = pow(2, rank) > 256 ? pow(2, rank) : 256;//(1 + ((width * height * 2) - 1) / 256) * 256;//в 2 раза будет достаточно
     size_t threadsPerBlock = 256;
-    qDebug() << gridSize;
     int numBlock = gridSize / threadsPerBlock;
+#else
+    //int rank = (int)(log2(width)) + 1;
+    //size_t gridSize[2] = {width, height};
+    size_t gridSize[2] = {(1 + (width - 1) / 256) * 256, (1 + (height - 1) / 256) * 256};
+    size_t threadsPerBlock[2] = {16, 16};
+    int numBlock = (gridSize[0] * gridSize[1]) / (threadsPerBlock[0] * threadsPerBlock[1]);
+#endif
 
     uint count = 0;
     uint *partialCount = nullptr;
-    uint *partialSum = nullptr;
+    uint *xPartialSum = nullptr;
+    uint *yPartialSum = nullptr;
 
-    cl_mem resultSum = clCreateBuffer(m_device->m_context, CL_MEM_READ_ONLY, sizeof(uint) * numBlock, 0x0, &errorCode);
-    cl_mem resultCount = clCreateBuffer(m_device->m_context, CL_MEM_READ_ONLY, sizeof(uint) * numBlock, 0x0, &errorCode);
-    if(!resultSum || !resultCount)
+    cl_mem xResult = clCreateBuffer(m_device->m_context, CL_MEM_READ_WRITE, sizeof(uint) * numBlock, 0x0, &errorCode);
+    cl_mem yResult = clCreateBuffer(m_device->m_context, CL_MEM_READ_WRITE, sizeof(uint) * numBlock, 0x0, &errorCode);
+    cl_mem resultCount = clCreateBuffer(m_device->m_context, CL_MEM_READ_WRITE, sizeof(uint) * numBlock, 0x0, &errorCode);
+    if(!xResult || !yResult || !resultCount)
         goto finish;
 
     arg = 0;
     errorCode = clSetKernelArg(kernel, arg++, sizeof (cl_mem), &clMask->m_image);
-    errorCode |= clSetKernelArg(kernel, arg++, sizeof(uint) * threadsPerBlock, nullptr);
-    errorCode |= clSetKernelArg(kernel, arg++, sizeof (cl_mem), &resultSum);
-    errorCode |= clSetKernelArg(kernel, arg++, sizeof(uint) * threadsPerBlock, nullptr);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof(uint) * threadsPerBlock[0] * threadsPerBlock[1], nullptr);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof(uint) * threadsPerBlock[0] * threadsPerBlock[1], nullptr);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (cl_mem), &xResult);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (cl_mem), &yResult);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof(uint) * threadsPerBlock[0] * threadsPerBlock[1], nullptr);
     errorCode |= clSetKernelArg(kernel, arg++, sizeof (cl_mem), &resultCount);
-    errorCode |= clSetKernelArg(kernel, arg++, sizeof (int), &width);
-    errorCode |= clSetKernelArg(kernel, arg++, sizeof (int), &height);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (int), &w);
+    errorCode |= clSetKernelArg(kernel, arg++, sizeof (int), &h);
     if(errorCode != 0)
         goto finish;
 
-    errorCode = clEnqueueNDRangeKernel(m_queue, kernel, 1, 0x0, &gridSize, &threadsPerBlock, 0, 0x0, 0x0);
+    errorCode = clEnqueueNDRangeKernel(m_queue, kernel, 2, 0x0, gridSize, threadsPerBlock, 0, 0x0, 0x0);
     if(errorCode != 0)
         goto finish;
 
@@ -382,31 +396,45 @@ IPError OpenclContext::CenterOfBitmap(IPImage *mask, int &x, int &y)
         goto finish;
 
     partialCount = (uint*)malloc(numBlock * sizeof (uint));
-    partialSum = (uint*)malloc(numBlock * sizeof (uint));
+    xPartialSum = (uint*)malloc(numBlock * sizeof (uint));
+    yPartialSum = (uint*)malloc(numBlock * sizeof (uint));
 
     clEnqueueReadBuffer(m_queue, resultCount, CL_TRUE, 0, numBlock * sizeof (uint), partialCount, 0, 0x0, 0x0);
-    clEnqueueReadBuffer(m_queue, resultSum, CL_TRUE, 0, numBlock * sizeof (uint), partialSum, 0, 0x0, 0x0);
+    clEnqueueReadBuffer(m_queue, xResult, CL_TRUE, 0, numBlock * sizeof (uint), xPartialSum, 0, 0x0, 0x0);
+    clEnqueueReadBuffer(m_queue, yResult, CL_TRUE, 0, numBlock * sizeof (uint), yPartialSum, 0, 0x0, 0x0);
 
     count = 0;
-    x = 0;
-    y = 0;
+    _x = 0;
+    _y = 0;
     for(int i = 0; i < numBlock; i++)
     {
         count += partialCount[i];
-        x += (partialSum[i] % width) / partialCount[i];
-        y += (partialSum[i] / width) / partialCount[i];
     }
-    qDebug() << count << " = " << width * height;
-    qDebug() << x << " = " <<  x;
-    qDebug() << y << " = " <<  y;
 
+    for(int i = 0; i < numBlock; i++)
+    {
+        _x += xPartialSum[i] / (float)count;
+        _y += yPartialSum[i] / (float)count;
+    }
+
+    x = (int)_x;
+    y = (int)_y;
+#if 0
+    qDebug() << count << " = " << width * height;
+    qDebug() << "x = " <<  x;
+    qDebug() << "y = " <<  y;
+#endif
 finish:
     if(partialCount)
         free(partialCount);
-    if(partialSum)
-        free(partialSum);
-    if(resultSum)
-        clReleaseMemObject(resultSum);
+    if(xPartialSum)
+        free(xPartialSum);
+    if(yPartialSum)
+        free(yPartialSum);
+    if(xResult)
+        clReleaseMemObject(xResult);
+    if(yResult)
+        clReleaseMemObject(yResult);
     if(resultCount)
         clReleaseMemObject(resultCount);
     return errorCode == 0 ? IPNoError : IPErrorExecute;
