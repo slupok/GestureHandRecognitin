@@ -93,6 +93,19 @@ bool OpenclDevice::CreateProgram(char *source, size_t sourceSize)
     if(error != 0)
         return false;
 
+    m_separableGaussianBlurKernel = clCreateKernel(m_imageProgram, "SeparableGaussianBlurKernel", &error);
+    if(error != 0)
+        return false;
+
+    m_coordinateSummingKernel = clCreateKernel(m_imageProgram, "CoordinateSummingKernel", &error);
+    if(error != 0)
+        return false;
+
+    m_bitmapCentralMomentKernel = clCreateKernel(m_imageProgram, "BitmapCentralMomentKernel", &error);
+    if(error != 0)
+        return false;
+
+    //морфология
     m_morphologicalDilationKernel = clCreateKernel(m_imageProgram, "MorphologicalDilationKernel", &error);
     if(error != 0)
         return false;
@@ -101,13 +114,13 @@ bool OpenclDevice::CreateProgram(char *source, size_t sourceSize)
     if(error != 0)
         return false;
 
-    m_separableGaussianBlurKernel = clCreateKernel(m_imageProgram, "SeparableGaussianBlurKernel", &error);
+    //bitmap
+    m_bitmapSubtractionKernel = clCreateKernel(m_imageProgram, "BitmapSubtractionKernel", &error);
     if(error != 0)
         return false;
 
-    m_coordinateSummingKernel = clCreateKernel(m_imageProgram, "CoordinateSummingKernel", &error);
+    m_bitmapIntersectionKernel = clCreateKernel(m_imageProgram, "BitmapIntersectionKernel", &error);
     if(error != 0)
         return false;
-    //kMeansKernel
     return true;
 }

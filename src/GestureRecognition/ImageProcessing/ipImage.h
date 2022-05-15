@@ -11,12 +11,13 @@ protected:
 
 public:
     virtual ~IPImage();
-    static uint IP_GetBytesPerPixel(PixelType pixelType);
+    static uint IP_GetBytesPerPixel(PixelType pixelType);//del
     uint GetWidth();
     uint GetHeight();
     PixelType GetPixelType();
     virtual IPEnum GetDeviceType() = 0;
     virtual IPError WriteImage(const void *data, size_t length) = 0;
+    //доавть IsSizeEqual()
 
     //можно добавить функцию которая заполняем текущий QImage, чтобы каждый раз не создавать новый
     //соответсвенно нужны проверки, чтобы совпадали размеры и colorType

@@ -215,22 +215,58 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         m_backgroundMask = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
         error = m_context->GaussianBlur(m_backgroundMask, 2, 4.0f);
         m_mask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
+        m_tmpMask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
     }
     else
     {
         m_image->WriteImage((unsigned char*)frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
     }
 
-    //с дилатацией и эрозией напутал, дилатация - расширяет, эрозия - уменьшает.
+    uint sum = 0;
+
     error = m_context->GaussianBlur(m_image, 2, 4.0f);
     error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 7);
-    error = m_context->MorphologicalDilation(m_mask, 3);
-    error = m_context->MorphologicalErosion(m_mask, 2);
-    error = m_context->ColorThresholdConversion(m_image, m_mask);
+    error = m_context->MorphologicalErosion(m_mask, 3);
     error = m_context->MorphologicalDilation(m_mask, 2);
-    int x = 0;
-    int y = 0;
-    error = m_context->CenterOfBitmap(m_mask, x, y);
+    error = m_context->ColorThresholdConversion(m_image, m_mask);
+
+#if 1
+    //сохраняем Bitmap
+    error = m_context->copyImage(m_mask, m_tmpMask);
+    error = m_context->MorphologicalErosion(m_mask, 6);
+    error = m_context->MorphologicalDilation(m_mask, 8);
+    //находим пересечение новой картинки со старой
+    error = m_context->BitmapIntersection(m_mask, m_tmpMask);
+#endif
+
+   error = m_context->copyImage(m_mask, m_tmpMask);
+   error = m_context->MorphologicalDilation(m_mask, 2);
+   error = m_context->BitmapSubtraction(m_mask, m_tmpMask);
+
+   int centerX = 0;
+   int centerY = 0;
+   error = m_context->CenterOfBitmap(m_mask, centerX, centerY);
+   int m00 = 0;
+   error = m_context->CentralMoment(m_image, m_mask, 0, 0, 0, 0, m00);
+
+   int p, q;
+
+   int m20 = 0;
+   p = 2;
+   q = 0;
+   error = m_context->CentralMoment(m_image, m_mask, p, q, centerX, centerY, m20);
+
+   float v20 = (float)m20 / (pow(m00, (p+q)/2 + 1));
+
+   qDebug() << v20;
+#if 0
+    QColor clr(255,255,255);
+    for(int i = -5; i <= 5; i++)
+        for(int j = -5; j <= 5; j++)
+            frame.setPixelColor(centerX + i,centerY + j, clr);
+
+#endif
+
 #if 0
     QImage img(width, height, QImage::Format_RGB888);
     m_image->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));

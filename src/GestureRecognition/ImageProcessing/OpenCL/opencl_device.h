@@ -28,9 +28,14 @@ public:
     cl_kernel m_frameDifferenceKernel;
     cl_kernel m_thresholdColorKernel;
     cl_kernel m_separableGaussianBlurKernel;
+    cl_kernel m_coordinateSummingKernel;
+    cl_kernel m_bitmapCentralMomentKernel;
+
     cl_kernel m_morphologicalErosionKernel;
     cl_kernel m_morphologicalDilationKernel;
-    cl_kernel m_coordinateSummingKernel;//CoordinateSummingReductionKernel
+
+    cl_kernel m_bitmapSubtractionKernel;
+    cl_kernel m_bitmapIntersectionKernel;
 };
 
 #endif //GESTURE_CL_H

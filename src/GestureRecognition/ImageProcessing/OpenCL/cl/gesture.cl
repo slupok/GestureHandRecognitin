@@ -220,6 +220,10 @@ __kernel void SeparableGaussianBlurKernel(
 #endif
 }
 
+/**************
+ * морфология *
+ **************/
+
 __kernel void MorphologicalErosionKernel(__global uchar *image,
                                          __constant uchar *baseImage,
                                          int radius,
@@ -233,13 +237,13 @@ __kernel void MorphologicalErosionKernel(__global uchar *image,
         return;
     int index = x + y * width;
 
-    if(baseImage[index] != 255)
+    if(baseImage[index] != 0)
             return;
 
     for(int iy = -radius; iy <= radius; iy++)
         for(int ix = -radius; ix <= radius; ix++)
         {
-            image[(x+ix) + (y+iy) * width] = 255;
+            image[(x+ix) + (y+iy) * width] = 0;
         }
 
 }
@@ -257,13 +261,13 @@ __kernel void MorphologicalDilationKernel(__global uchar *image,
         return;
     int index = x + y * width;
 
-    if(baseImage[index] != 0)
+    if(baseImage[index] != 255)
             return;
 
     for(int iy = -radius; iy <= radius; iy++)
         for(int ix = -radius; ix <= radius; ix++)
         {
-            image[(x+ix) + (y+iy) * width] = 0;
+            image[(x+ix) + (y+iy) * width] = 255;
         }
 }
 
@@ -318,6 +322,100 @@ __kernel void CoordinateSummingKernel(__constant uchar *image,
     }
 }
 
+//здесь можно передавать кол-во пикселей контура для оптимизаци
+//или хранить массив индексов валидных вокселей
+__kernel void BitmapCentralMomentKernel(__constant void *image,
+                                        __constant uchar *bitmap,
+                                        __local uint *localResult,
+                                        __global uint *result,
+                                        int centerX,
+                                        int centerY,
+                                        int p,
+                                        int q,
+                                        int width,
+                                        int height,
+                                        PixelType pixelType)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    uchar grayColor = 0;
+
+    int globalId = x + width * y;
+    int localSize = get_local_size(0) * get_local_size(1);
+    int localId = get_local_id(0) + get_local_size(0) * get_local_id(1);
+    int groupId =  get_group_id(0) + get_num_groups(0) * get_group_id(1);
+
+    if(globalId >= width * height || bitmap[globalId] == 0)
+    {
+        localResult[localId] = 0;
+    }
+    else
+    {
+        if(pixelType == RGB24)
+            grayColor = RGB2Grayscale(((__constant RGB_format*)image)[globalId]);
+
+        localResult[localId] = (uint)(pow((float)(x - centerX),p) * pow((float)(y - centerY),q) * grayColor);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+    for(int i = localSize >> 1; i > 0; i >>= 1)
+    {
+        if(localId < i)
+        {
+            localResult[localId] += localResult[localId + i];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    if(localId == 0)
+    {
+        result[groupId] = localResult[0];
+    }
+}
+
+/*************
+ * Множества *
+ *************/
+
+__kernel void BitmapSubtractionKernel(__global uchar *baseImage,
+                                 __constant uchar *subtrahendImage,
+                                 int width,
+                                 int height)
+{
+    int index = get_global_id(0);
+
+    if(index >= width * height)
+        return;
+
+    if(baseImage[index] == 255 && subtrahendImage[index] == 0)
+        baseImage[index] = 255;
+    else
+        baseImage[index] = 0;
+}
+
+__kernel void BitmapIntersectionKernel(__global uchar *firstImage,
+                                  __constant uchar *secondImage,
+                                  int width,
+                                  int height)
+{
+    int index = get_global_id(0);
+
+    if(index >= width * height)
+        return;
+
+    if(firstImage[index] != secondImage[index])
+        firstImage[index] = 0;
+}
+
+
+/*
+
+__kernel ContourMomentKernel()
+{
+
+}
+*/
 
 /*
 typedef struct Cluster{

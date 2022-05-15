@@ -26,14 +26,24 @@ public:
 
     IPEnum GetDeviceType() override;
 
+    //image functions
+    IPError copyImage(IPImage *sourceImage, IPImage *destinationImage) override;
+
     //functions
     IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) override;
     IPError FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold) override;
     IPError ColorThresholdConversion(IPImage *image, IPImage *resultMask) override;
     IPError GaussianBlur(IPImage *image, int radius, float sigma) override;
+    IPError CenterOfBitmap(IPImage *mask, int &x, int &y) override;
+    IPError CentralMoment(IPImage *image, IPImage *mask, const int p, const int q, const int cx, const int cy, int &moment) override;
+
+    //morphological functions
     IPError MorphologicalDilation(IPImage *image, int radius) override;
     IPError MorphologicalErosion(IPImage *image, int radius) override;
-    IPError CenterOfBitmap(IPImage *mask, int &x, int &y) override;
+
+    //bitmap functions
+    IPError BitmapSubtraction(IPImage *bitmap, IPImage *subtrahendBitmap) override;
+    IPError BitmapIntersection(IPImage *bitmap, IPImage *tmpBitmap) override;
 
 private:
     //мб создать счетчик ссылок на device, и тогда освобжать его, когда больше нет ссылок?

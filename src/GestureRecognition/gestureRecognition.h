@@ -34,6 +34,7 @@ private:
     IPImage *m_image;
     IPImage *m_backgroundMask;
     IPImage *m_mask;
+    IPImage *m_tmpMask;
 
 };
 #endif // GESTURERECOGNITION_H
