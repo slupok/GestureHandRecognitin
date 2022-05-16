@@ -224,23 +224,23 @@ void GestureRecognition::onUpdateFrame(QImage frame)
 
     uint sum = 0;
 
-    error = m_context->GaussianBlur(m_image, 2, 4.0f);
-    error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 7);
+    error = m_context->GaussianBlur(m_image, 2, 3.0f);
+    error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 5);
     error = m_context->MorphologicalErosion(m_mask, 3);
     error = m_context->MorphologicalDilation(m_mask, 2);
     error = m_context->ColorThresholdConversion(m_image, m_mask);
 
-#if 1
+
     //сохраняем Bitmap
     error = m_context->copyImage(m_mask, m_tmpMask);
-    error = m_context->MorphologicalErosion(m_mask, 6);
-    error = m_context->MorphologicalDilation(m_mask, 8);
+    error = m_context->MorphologicalErosion(m_mask, 7);
+    error = m_context->MorphologicalDilation(m_mask, 6);
     //находим пересечение новой картинки со старой
     error = m_context->BitmapIntersection(m_mask, m_tmpMask);
-#endif
+#if 1
 
    error = m_context->copyImage(m_mask, m_tmpMask);
-   error = m_context->MorphologicalDilation(m_mask, 2);
+   error = m_context->MorphologicalDilation(m_mask, 1);
    error = m_context->BitmapSubtraction(m_mask, m_tmpMask);
 
    int centerX = 0;
@@ -249,16 +249,30 @@ void GestureRecognition::onUpdateFrame(QImage frame)
    int m00 = 0;
    error = m_context->CentralMoment(m_image, m_mask, 0, 0, 0, 0, m00);
 
-   int p, q;
 
-   int m20 = 0;
-   p = 2;
-   q = 0;
-   error = m_context->CentralMoment(m_image, m_mask, p, q, centerX, centerY, m20);
+   //invariants
 
-   float v20 = (float)m20 / (pow(m00, (p+q)/2 + 1));
+   float v20 = NormalizedCentralMoment(2, 0, centerX, centerY, m00);
+   float v02 = NormalizedCentralMoment(0, 2, centerX, centerY, m00);
+   float v11 = NormalizedCentralMoment(1, 1, centerX, centerY, m00);
+   float v30 = NormalizedCentralMoment(3, 0, centerX, centerY, m00);
+   float v12 = NormalizedCentralMoment(1, 2, centerX, centerY, m00);
+   float v21 = NormalizedCentralMoment(2, 1, centerX, centerY, m00);
+   float v03 = NormalizedCentralMoment(0, 3, centerX, centerY, m00);
 
-   qDebug() << v20;
+   float I[7];
+   I[0] = v20 + v02;
+   I[1] = (v20 - v02) * (v20 - v02) + 4 * v11 * v11;
+   I[2] = (v30 - 3 * v12) * (v30 - 3 * v12) + (3 * v21 - v03) * (3 * v21 - v03);
+   I[3] = (v30 + v12) * (v30 + v12) + (v21 + v03) * (v21 + v03);
+   I[4] = (v30 - 3 * v12) * (v30 + v12) * ((v30 + v12)*(v30 + v12) - 3*(v21 + v03)*(v21 + v03)) + (3*v21 - v03)*(v21 + v03) *
+           (3*(v30 + v12)*(v30 + v12) - (v21 + v03)*(v21 + v03));
+   I[5] = (v20 - v02)*((v30 + v12)*(v30 + v12) - (v21+v03)*(v21+v03)) + 4 * v11 * (v30 + v12) * (v21 + v03);
+   I[6] = (3*v21 - v03)  *(v21 + v03) * (3*(v30 + v12)*(v30 + v12)-(v21 + v03)*(v21 + v03)) - (v30 - 3*v12) *(v21 + v02) *
+           (3*(v30 + v12)*(v30 + v12) - (v21 + v03)*(v21 + v03));
+   qDebug() << I[0] << " " << I[1] << " " << I[2] << " " << I[3] << " " << I[4] << " " << I[5] << " " << I[6];
+#endif
+
 #if 0
     QColor clr(255,255,255);
     for(int i = -5; i <= 5; i++)
@@ -267,26 +281,52 @@ void GestureRecognition::onUpdateFrame(QImage frame)
 
 #endif
 
-#if 0
-    QImage img(width, height, QImage::Format_RGB888);
-    m_image->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
-    m_ui->setImage(img);
 
-#else
+finish:
     if(m_mask->GetPixelType() == PixelType::Grayscale8)
     {
         QImage img(width, height, QImage::Format_Grayscale8);
         m_mask->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
         m_ui->setImage(img);
+        img.save("out.jpg", "JPG");
+
+        QString filename = "Invariants.txt";
+        QFile file(filename);
+        if (file.open(QIODevice::ReadWrite))
+        {
+            QTextStream stream(&file);
+            stream << "I1 = " << I[0] << Qt::endl;
+            stream << "I2 = " << I[1] << Qt::endl;
+            stream << "I3 = " << I[2] << Qt::endl;
+            stream << "I4 = " << I[3] << Qt::endl;
+            stream << "I5 = " << I[4] << Qt::endl;
+            stream << "I6 = " << I[5] << Qt::endl;
+            stream << "I7 = " << I[6] << Qt::endl;
+        }
+        file.close();
+
     }
     m_ui->setTmpImage(frame);
 
-#endif
+
+
     m_block_ = false;
-    //m_ui->setImage(frame);
 }
 
 void GestureRecognition::setUI(WebCam *ui)
 {
     m_ui = ui;
+}
+
+float GestureRecognition::NormalizedCentralMoment(int p, int q, int cx, int cy, int m00)
+{
+    IPError error;
+
+    float denominator = (pow(m00, (p+q)/2 + 1));
+
+    int m = 0;
+    error = m_context->CentralMoment(m_image, m_mask, p, q, cx, cy, m);
+    float v = (float)m / denominator;
+
+    return v;
 }
