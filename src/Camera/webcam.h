@@ -20,6 +20,7 @@ public:
     ~WebCam();
     void setImage(QImage img);
     void setTmpImage(QImage img);
+    void setOutput(QString text);
 
 private:
     Ui::WebCam *ui;

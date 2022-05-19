@@ -170,6 +170,22 @@ GestureRecognition::GestureRecognition() : QObject()
     m_mask = nullptr;
     m_block = false;
 
+    m_fiveInv[0] = 0.03606f;
+    m_fiveInv[1] = 0.002960058f;
+    m_fiveInv[2] = 0.00405476f;
+    m_fiveInv[3] = 0.00405476f;
+    m_fiveInv[4] = 2.32557411522f;
+    m_fiveInv[5] = 11.4448330701f;
+    m_fiveInv[6] = 5.621915188f;
+
+    m_niceInv[0] = 0.09227512f;
+    m_niceInv[1] = 0.00200292f;
+    m_niceInv[2] = 0.04409886f;
+    m_niceInv[3] = 0.04409886f;
+    m_niceInv[4] = 0.002252922f;
+    m_niceInv[5] = 0.00192984f;
+    m_niceInv[5] = 0.001380888f;
+
 }
 GestureRecognition::~GestureRecognition()
 {
@@ -237,7 +253,6 @@ void GestureRecognition::onUpdateFrame(QImage frame)
     error = m_context->MorphologicalDilation(m_mask, 6);
     //находим пересечение новой картинки со старой
     error = m_context->BitmapIntersection(m_mask, m_tmpMask);
-#if 1
 
    error = m_context->copyImage(m_mask, m_tmpMask);
    error = m_context->MorphologicalDilation(m_mask, 1);
@@ -270,7 +285,90 @@ void GestureRecognition::onUpdateFrame(QImage frame)
    I[5] = (v20 - v02)*((v30 + v12)*(v30 + v12) - (v21+v03)*(v21+v03)) + 4 * v11 * (v30 + v12) * (v21 + v03);
    I[6] = (3*v21 - v03)  *(v21 + v03) * (3*(v30 + v12)*(v30 + v12)-(v21 + v03)*(v21 + v03)) - (v30 - 3*v12) *(v21 + v02) *
            (3*(v30 + v12)*(v30 + v12) - (v21 + v03)*(v21 + v03));
-   qDebug() << I[0] << " " << I[1] << " " << I[2] << " " << I[3] << " " << I[4] << " " << I[5] << " " << I[6];
+   //qDebug() << I[0] << " " << I[1] << " " << I[2] << " " << I[3] << " " << I[4] << " " << I[5] << " " << I[6];
+
+   int resultInv[GESTURE_COUNT];
+   memset(resultInv, 0, GESTURE_COUNT * sizeof(int));
+
+   //проверить эти данные
+   //0.103746   0.00277854   0.102431   0.102431   0.0104921   0.00383107   0.00709715
+   //FIVE
+
+   float minValue;
+   int minGesture;
+   for(int invariant = 0; invariant < INVARIANTS_COUNT; invariant++)
+   {
+        minValue = abs(I[invariant] - m_DataInv[0][invariant][0]);
+        minGesture = 0;
+        for(int gesture = 0; gesture < GESTURE_COUNT; gesture++)
+        {
+            for(int j = 0; j < MOMENTS_COUNT; j++)
+            {
+                float val = abs(I[invariant] - m_DataInv[gesture][invariant][j]);
+                if(val <= minValue)
+                {
+                    minValue = val;
+                    minGesture = gesture;
+                }
+            }
+        }
+        resultInv[minGesture]++;
+   }
+
+   float maxValue = resultInv[0];
+   int maxGesture = 0;
+   for(int i = 0; i < GESTURE_COUNT; i++)
+   {
+        if(resultInv[i] >= maxValue)
+        {
+            maxGesture = i;
+            maxValue = resultInv[i];
+        }
+   }
+   switch (maxGesture)
+   {
+   case 0:
+       m_ui->setOutput("FIVE");
+       qDebug() << "FIVE";
+       break;
+   case 1:
+       m_ui->setOutput("NICING");
+       qDebug() << "NICING";
+       break;
+   default:
+       m_ui->setOutput("I DONT KNOW");
+       qDebug() << "I DONT KNOW";
+       break;
+
+   }
+
+#if 0
+   int fiveCount = 0;
+   int niceCount = 0;
+
+   for(int i = 0; i < 7; i++)
+   {
+       if( abs(m_fiveInv[i] - I[i]) < abs(m_niceInv[i] - I[i]) )
+       {
+           fiveCount++;
+       }
+       else if( abs(m_fiveInv[i] - I[i]) > abs(m_niceInv[i] - I[i]) )
+       {
+           niceCount++;
+       }
+       else
+       {
+           fiveCount++;
+           niceCount++;
+       }
+   }
+
+   if(fiveCount > niceCount)
+    qDebug() << "FIVE";
+   else if(fiveCount < niceCount)
+    qDebug() << "NICING";
+   else
+    qDebug() << "I DONT KNOW";
 #endif
 
 #if 0
@@ -288,8 +386,9 @@ finish:
         QImage img(width, height, QImage::Format_Grayscale8);
         m_mask->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
         m_ui->setImage(img);
-        img.save("out.jpg", "JPG");
 
+#if 0
+        img.save("out.jpg", "JPG");
         QString filename = "Invariants.txt";
         QFile file(filename);
         if (file.open(QIODevice::ReadWrite))
@@ -304,7 +403,7 @@ finish:
             stream << "I7 = " << I[6] << Qt::endl;
         }
         file.close();
-
+#endif
     }
     m_ui->setTmpImage(frame);
 

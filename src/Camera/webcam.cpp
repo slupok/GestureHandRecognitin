@@ -31,3 +31,8 @@ void WebCam::setTmpImage(QImage img)
     ui->label2->update();
 }
 
+void WebCam::setOutput(QString text)
+{
+    //ui->label->resize(img.size());
+    ui->lable_output->setText(text);
+}
