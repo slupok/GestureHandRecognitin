@@ -40,6 +40,8 @@ public:
 
     //functions
     virtual IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) = 0;
+
+
     virtual IPError FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold) = 0;
     virtual IPError ColorThresholdConversion(IPImage *image, IPImage *resultMask) = 0;
     virtual IPError GaussianBlur(IPImage *image, int radius, float sigma) = 0;
@@ -53,6 +55,7 @@ public:
     //bitmap functions
     virtual IPError BitmapSubtraction(IPImage *bitmap, IPImage *subtrahendBitmap) = 0;
     virtual IPError BitmapIntersection(IPImage *bitmap, IPImage *tmpBitmap) = 0;
+
 //protected:
   //  IPImage *m_image;
 };

@@ -215,9 +215,12 @@ void GestureRecognition::onUpdateFrame(QImage frame)
     m_block_ = true;
 
     IPError error;
-
     int width = frame.width();
     int height = frame.height();
+
+   // QImage imgGray(width, height, QImage::Format_Grayscale8);
+  //  QImage imgRGB(width, height, QImage::Format_RGB888);
+
     if(cntFrame <= 70 )
     {
         cntFrame++;
@@ -229,9 +232,12 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         // first frame
         m_image = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
         m_backgroundMask = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
-        error = m_context->GaussianBlur(m_backgroundMask, 2, 4.0f);
+        error = m_context->GaussianBlur(m_backgroundMask, 3, 4.0f);
         m_mask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
         m_tmpMask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
+
+       // m_backgroundMask->ReadImage(imgRGB.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+       // imgRGB.save("bg.jpg", "JPG");
     }
     else
     {
@@ -240,12 +246,25 @@ void GestureRecognition::onUpdateFrame(QImage frame)
 
     uint sum = 0;
 
-    error = m_context->GaussianBlur(m_image, 2, 3.0f);
-    error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 5);
+   // m_image->ReadImage(imgRGB.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+  //  imgRGB.save("base.jpg", "JPG");
+
+    error = m_context->GaussianBlur(m_image, 3, 4.0f);
+   // m_image->ReadImage(imgRGB.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+    //imgRGB.save("gaussianBlur.jpg", "JPG");
+
+    error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 6);
+   // m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
+    //imgGray.save("frameDiff.jpg", "JPG");
+
     error = m_context->MorphologicalErosion(m_mask, 3);
     error = m_context->MorphologicalDilation(m_mask, 2);
-    error = m_context->ColorThresholdConversion(m_image, m_mask);
+    //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
+    //imgGray.save("eros_and_dil_1.jpg", "JPG");
 
+    error = m_context->ColorThresholdConversion(m_image, m_mask);
+    //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
+    //imgGray.save("colorThreshold.jpg", "JPG");
 
     //сохраняем Bitmap
     error = m_context->copyImage(m_mask, m_tmpMask);
@@ -253,10 +272,14 @@ void GestureRecognition::onUpdateFrame(QImage frame)
     error = m_context->MorphologicalDilation(m_mask, 6);
     //находим пересечение новой картинки со старой
     error = m_context->BitmapIntersection(m_mask, m_tmpMask);
+    //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
+    //imgGray.save("eros_and_dil_2.jpg", "JPG");
 
    error = m_context->copyImage(m_mask, m_tmpMask);
    error = m_context->MorphologicalDilation(m_mask, 1);
    error = m_context->BitmapSubtraction(m_mask, m_tmpMask);
+   //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
+   //imgGray.save("contour.jpg", "JPG");
 
    int centerX = 0;
    int centerY = 0;
@@ -285,7 +308,7 @@ void GestureRecognition::onUpdateFrame(QImage frame)
    I[5] = (v20 - v02)*((v30 + v12)*(v30 + v12) - (v21+v03)*(v21+v03)) + 4 * v11 * (v30 + v12) * (v21 + v03);
    I[6] = (3*v21 - v03)  *(v21 + v03) * (3*(v30 + v12)*(v30 + v12)-(v21 + v03)*(v21 + v03)) - (v30 - 3*v12) *(v21 + v02) *
            (3*(v30 + v12)*(v30 + v12) - (v21 + v03)*(v21 + v03));
-   //qDebug() << I[0] << " " << I[1] << " " << I[2] << " " << I[3] << " " << I[4] << " " << I[5] << " " << I[6];
+   qDebug() << I[0] << " " << I[1] << " " << I[2] << " " << I[3] << " " << I[4] << " " << I[5] << " " << I[6];
 
    int resultInv[GESTURE_COUNT];
    memset(resultInv, 0, GESTURE_COUNT * sizeof(int));
@@ -332,8 +355,16 @@ void GestureRecognition::onUpdateFrame(QImage frame)
        qDebug() << "FIVE";
        break;
    case 1:
-       m_ui->setOutput("NICING");
+       m_ui->setOutput("NICE");
        qDebug() << "NICING";
+       break;
+   case 2:
+       m_ui->setOutput("THREE");
+       qDebug() << "THREE";
+       break;
+   case 3:
+       m_ui->setOutput("ROCK!");
+       qDebug() << "ROCK!";
        break;
    default:
        m_ui->setOutput("I DONT KNOW");
@@ -341,6 +372,7 @@ void GestureRecognition::onUpdateFrame(QImage frame)
        break;
 
    }
+
 
 #if 0
    int fiveCount = 0;
@@ -369,6 +401,19 @@ void GestureRecognition::onUpdateFrame(QImage frame)
     qDebug() << "NICING";
    else
     qDebug() << "I DONT KNOW";
+
+
+
+   I1 = -0.00852695
+   I2 = 0.0025138
+   I3 = 0.00636029
+   I4 = 0.00636029
+   I5 = 4.04533e-05
+   I6 = 9.49075e-05
+   I7 = 2.32851e-05
+
+
+
 #endif
 
 #if 0
