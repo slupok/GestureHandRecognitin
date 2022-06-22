@@ -3,7 +3,7 @@
 #include <math.h>
 #include <QFile>
 
-#include "imageDataBuffer.h"
+//#include "imageDataBuffer.h"
 #include "ImageProcessing/imageProcessing.h"
 #include "../Camera/camera.h"
 #include "../Camera/webcam.h"
@@ -55,7 +55,6 @@ class GestureRecognition : public QObject
 public:
     GestureRecognition();
     ~GestureRecognition();
-    static void thresholdColorConversion(ImageBuffer *buffer);
     void startGR();
     void setUI(WebCam *ui);
 

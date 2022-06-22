@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "gestureRecognition.h"
-
+#if 0
 //Евклидова метрика
 float length_E(RGB_format a, RGB_format b)
 {
@@ -134,6 +134,7 @@ void Kmeans(unsigned char *mask, RGB_format *image, int height, int width)
     free(cluster);
 
 }
+#endif
 
 void setBinarizedImage(uint8_t *mask, QImage *img)
 {
@@ -153,12 +154,6 @@ void setBinarizedImage(uint8_t *mask, QImage *img)
             if(mask[i] == 4)
                 img->setPixel(x,y,0xFFFFFF);
         }
-}
-
-void GestureRecognition::thresholdColorConversion(ImageBuffer *buffer)
-{
-
-
 }
 
 GestureRecognition::GestureRecognition() : QObject()

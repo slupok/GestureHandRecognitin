@@ -30,7 +30,7 @@ public:
     IPError copyImage(IPImage *sourceImage, IPImage *destinationImage) override;
 
     //functions
-    IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) override;
+  //  IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) override;
     IPError FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold) override;
     IPError ColorThresholdConversion(IPImage *image, IPImage *resultMask) override;
     IPError GaussianBlur(IPImage *image, int radius, float sigma) override;

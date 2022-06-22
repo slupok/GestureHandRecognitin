@@ -11,14 +11,14 @@ CONFIG += c++11
 SOURCES += \
     src/main.cpp \
     src/GestureRecognition/gestureRecognition.cpp \
-    src/GestureRecognition/imageDataBuffer.cpp \
+ #   src/GestureRecognition/imageDataBuffer.cpp \
     src/Camera/camera.cpp \
     src/Camera/basedVideoSurface.cpp \
     src/Camera/webcam.cpp
 
 HEADERS += \
     src/GestureRecognition/gestureRecognition.h \
-    src/GestureRecognition/imageDataBuffer.h \
+   # src/GestureRecognition/imageDataBuffer.h \
     src/Camera/camera.h \
     src/Camera/videoSurfaceCaptured.h \
     src/Camera/basedVideoSurface.h \
@@ -37,16 +37,16 @@ HEADERS += \
 
 #image processing openCL
 SOURCES += \
-    src/GestureRecognition/ImageProcessing/OpenCL/opencl_processing.cpp \
+  #  src/GestureRecognition/ImageProcessing/OpenCL/opencl_processing.cpp \
     src/GestureRecognition/ImageProcessing/OpenCL/opencl_device.cpp \
-    src/GestureRecognition/ImageProcessing/OpenCL/opencl_program.cpp \
+  #  src/GestureRecognition/ImageProcessing/OpenCL/opencl_program.cpp \
     src/GestureRecognition/ImageProcessing/OpenCL/opencl_image.cpp \
     src/GestureRecognition/ImageProcessing/OpenCL/opencl_context.cpp
 
 HEADERS += \
     src/GestureRecognition/ImageProcessing/ipOpenCL.h \
     src/GestureRecognition/ImageProcessing/OpenCL/opencl_device.h \
-    src/GestureRecognition/ImageProcessing/OpenCL/opencl_program.h \
+ #   src/GestureRecognition/ImageProcessing/OpenCL/opencl_program.h \
     src/GestureRecognition/ImageProcessing/OpenCL/opencl_image.h \
     src/GestureRecognition/ImageProcessing/OpenCL/opencl_context.h
 

@@ -4,7 +4,7 @@
 #include "imageProcessing.h"
 #include "ipDevice.h"
 #include "ipImage.h"
-#include "../imageDataBuffer.h" //del
+//#include "../imageDataBuffer.h" //del
 
 #include "OpenCL/opencl_device.h"
 
@@ -39,7 +39,7 @@ public:
 
 
     //functions
-    virtual IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) = 0;
+ //   virtual IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) = 0;
 
 
     virtual IPError FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold) = 0;

@@ -66,7 +66,7 @@ IPEnum OpenclContext::GetDeviceType()
 {
     return IPDeviceOpenCL;
 }
-
+/*
 typedef struct Cluster{
     RGB_format center;
     int *positions;//хранит индексы
@@ -119,7 +119,7 @@ IPError OpenclContext::kMeans(int clustersCount, int iterationsCount, RGB_format
     clReleaseMemObject(sum_g_mem);
     clReleaseMemObject(sum_b_mem);
     return IPNoError;
-}
+}*/
 
 IPError OpenclContext::FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold)
 {
