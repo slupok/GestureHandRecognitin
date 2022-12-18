@@ -275,7 +275,7 @@ void GestureRecognition::onUpdateFrame(QImage frame)
    error = m_context->BitmapSubtraction(m_mask, m_tmpMask);
    //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
    //imgGray.save("contour.jpg", "JPG");
-
+#if 0
    int centerX = 0;
    int centerY = 0;
    error = m_context->CenterOfBitmap(m_mask, centerX, centerY);
@@ -368,57 +368,7 @@ void GestureRecognition::onUpdateFrame(QImage frame)
 
    }
 
-
-#if 0
-   int fiveCount = 0;
-   int niceCount = 0;
-
-   for(int i = 0; i < 7; i++)
-   {
-       if( abs(m_fiveInv[i] - I[i]) < abs(m_niceInv[i] - I[i]) )
-       {
-           fiveCount++;
-       }
-       else if( abs(m_fiveInv[i] - I[i]) > abs(m_niceInv[i] - I[i]) )
-       {
-           niceCount++;
-       }
-       else
-       {
-           fiveCount++;
-           niceCount++;
-       }
-   }
-
-   if(fiveCount > niceCount)
-    qDebug() << "FIVE";
-   else if(fiveCount < niceCount)
-    qDebug() << "NICING";
-   else
-    qDebug() << "I DONT KNOW";
-
-
-
-   I1 = -0.00852695
-   I2 = 0.0025138
-   I3 = 0.00636029
-   I4 = 0.00636029
-   I5 = 4.04533e-05
-   I6 = 9.49075e-05
-   I7 = 2.32851e-05
-
-
-
 #endif
-
-#if 0
-    QColor clr(255,255,255);
-    for(int i = -5; i <= 5; i++)
-        for(int j = -5; j <= 5; j++)
-            frame.setPixelColor(centerX + i,centerY + j, clr);
-
-#endif
-
 
 finish:
     if(m_mask->GetPixelType() == PixelType::Grayscale8)
@@ -427,23 +377,7 @@ finish:
         m_mask->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
         m_ui->setImage(img);
 
-#if 0
-        img.save("out.jpg", "JPG");
-        QString filename = "Invariants.txt";
-        QFile file(filename);
-        if (file.open(QIODevice::ReadWrite))
-        {
-            QTextStream stream(&file);
-            stream << "I1 = " << I[0] << Qt::endl;
-            stream << "I2 = " << I[1] << Qt::endl;
-            stream << "I3 = " << I[2] << Qt::endl;
-            stream << "I4 = " << I[3] << Qt::endl;
-            stream << "I5 = " << I[4] << Qt::endl;
-            stream << "I6 = " << I[5] << Qt::endl;
-            stream << "I7 = " << I[6] << Qt::endl;
-        }
-        file.close();
-#endif
+
     }
     m_ui->setTmpImage(frame);
 

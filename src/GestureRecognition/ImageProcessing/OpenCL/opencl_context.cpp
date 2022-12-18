@@ -232,7 +232,7 @@ IPError OpenclContext::GaussianBlur(IPImage *image, int radius, float sigma)
         {
             index = x + kDim * y;
             filter[index] = exp( -0.5 * (pow((x-radius)/sigma, 2.0) + pow((y-radius)/sigma,2.0)) )
-                             / (2 * M_PI * sigma * sigma);
+                             / (2 * /*M_PI*/ 3.14f * sigma * sigma);
 
             sum += filter[index];
         }

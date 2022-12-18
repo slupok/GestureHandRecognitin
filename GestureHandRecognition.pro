@@ -1,8 +1,10 @@
+TARGET = GestureHandRecognition
+
 QT       += core gui multimedia multimediawidgets
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets multimediawidgets
+#greaterThan(QT_MAJOR_VERSION, 4): QT += widgets multimediawidgets
 
-CONFIG += c++11
+CONFIG += stl c++11
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -57,11 +59,13 @@ FORMS += \
     src/Camera/webcam.ui
 
 
-LIBS += -L "C:/Program Files (x86)/AMD APP SDK/2.9-1/lib/x86_64" -l OpenCL
-INCLUDEPATH += "C:/Program Files (x86)/AMD APP SDK/2.9-1/include/"
-DEPENDPATH += "C:/Program Files (x86)/AMD APP SDK/2.9-1/include/"
+OPENCL_PATH = "C://Program Files (x86)//AMD APP SDK//3.0"
+
+LIBS += -L $${OPENCL_PATH}/lib/x86_64 -lOpenCL
+INCLUDEPATH += $${OPENCL_PATH}/include/
+DEPENDPATH += $${OPENCL_PATH}/include/
 
 # Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target
+#qnx: target.path = /tmp/$${TARGET}/bin
+#else: unix:!android: target.path = /opt/$${TARGET}/bin
+#!isEmpty(target.path): INSTALLS += target
