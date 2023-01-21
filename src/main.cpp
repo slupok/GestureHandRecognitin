@@ -18,14 +18,21 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    WebCam ui;
-    ui.show();
 
-    //покрыть тестами!!!
+    QWidget mainWidget;
+    mainWidget.resize(800, 600);
 
+    WebCam *baseImage = new WebCam(&mainWidget);
+    baseImage->setGeometry(0,0, mainWidget.size().width(), mainWidget.size().height());
+    baseImage->setObjectName(QString::fromUtf8("scene"));
+    baseImage->setAutoFillBackground(true);
+
+
+    mainWidget.setWindowTitle(QObject::tr("Gesture Hand Recognition"));
+    mainWidget.show();
 
     GestureRecognition *rg = new GestureRecognition();
-    rg->setUI(&ui);
+    rg->setUI(baseImage);
     rg->startGR();
 
     return a.exec();

@@ -1,38 +1,22 @@
 #include "webcam.h"
-#include "ui_webcam.h"
 
 WebCam::WebCam(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::WebCam)
+    : QLabel(parent), m_size(0, 0)
 {
-    ui->setupUi(this);
-    ui->label2->setScaledContents(true);
-    ui->label->setScaledContents(true);
+    setScaledContents(true);
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 WebCam::~WebCam()
 {
-    delete ui;
+
 }
 
 void WebCam::setImage(QImage img)
 {
-    //ui->label->resize(img.size());
-    ui->label->setPixmap(QPixmap::fromImage(img));
-    //ui->label->setScaledContents(true);
-    ui->label->update();
+    setPixmap(QPixmap::fromImage(img));
+    update();
 }
 
-void WebCam::setTmpImage(QImage img)
-{
-    //ui->label->resize(img.size());
-    ui->label2->setPixmap(QPixmap::fromImage(img));
-    //ui->label_tmp->setScaledContents(true);
-    ui->label2->update();
-}
 
-void WebCam::setOutput(QString text)
-{
-    //ui->label->resize(img.size());
-    ui->lable_output->setText(text);
-}
+

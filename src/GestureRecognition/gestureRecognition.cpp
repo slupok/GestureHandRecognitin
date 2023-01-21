@@ -371,24 +371,25 @@ void GestureRecognition::onUpdateFrame(QImage frame)
 #endif
 
 finish:
+#if 0
     if(m_mask->GetPixelType() == PixelType::Grayscale8)
     {
         QImage img(width, height, QImage::Format_Grayscale8);
         m_mask->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
-        m_ui->setImage(img);
+        m_baseImage->setImage(img);
 
 
     }
-    m_ui->setTmpImage(frame);
-
-
+#else
+    m_baseImage->setImage(frame);
+#endif
 
     m_block_ = false;
 }
 
-void GestureRecognition::setUI(WebCam *ui)
+void GestureRecognition::setUI(WebCam *baseImage)
 {
-    m_ui = ui;
+    m_baseImage = baseImage;
 }
 
 float GestureRecognition::NormalizedCentralMoment(int p, int q, int cx, int cy, int m00)

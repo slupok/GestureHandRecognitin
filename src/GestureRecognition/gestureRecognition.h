@@ -56,7 +56,7 @@ public:
     GestureRecognition();
     ~GestureRecognition();
     void startGR();
-    void setUI(WebCam *ui);
+    void setUI(WebCam *baseImage);
 
 public slots:
     void onUpdateFrame(QImage frame);
@@ -65,7 +65,7 @@ private:
     float NormalizedCentralMoment(int p, int q, int cx, int cy, int m00);
 
 private:
-    WebCam *m_ui;
+    WebCam *m_baseImage;
     Camera *m_camera;
     IPContext *m_context;
 
