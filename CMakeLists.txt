@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD            17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS         OFF)
 set(CMAKE_AUTOMOC                 ON)
-set(CMAKE_PREFIX_PATH "C:\\Qt\\5.15.2\\mingw81-64\\")
+# set(CMAKE_PREFIX_PATH "C:\\Qt\\5.15.2\\mingw81-64\\")
 set(BIN_BUILD_DIR ${CMAKE_BINARY_DIR}/bin)
 set(LIB_BUILD_DIR ${CMAKE_BINARY_DIR}/lib)
 
@@ -26,34 +26,13 @@ set(    CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${BIN_BUILD_DIR})
 set(    CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${LIB_BUILD_DIR})
 set(    CMAKE_LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${LIB_BUILD_DIR})
 
-#set(LIB_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/lib)
-
-#set(EIGEN_SUBDIRECTORY ${LIB_INCLUDE_DIR}/eigen)
-#set(EIGEN_INCLUDE_DIR ${LIB_INCLUDE_DIR}/eigen)
-#set(EIGEN_LINK_DIR)
-#add_subdirectory(${EIGEN_SUBDIRECTORY})
-#include_directories(${EIGEN_INCLUDE_DIR})
-
-#set(QT_ADVANCED_DOCKING_SYSTEM_SUBDIRECTORY ${LIB_INCLUDE_DIR}/Qt-Advanced-Docking-System)
-#set(QT_ADVANCED_DOCKING_SYSTEM_INCLUDE_DIR ${LIB_INCLUDE_DIR}/Qt-Advanced-Docking-System/src)
-#set(QT_ADVANCED_DOCKING_SYSTEM_LINK_DIR ${BIN_BUILD_DIR}) # because dll
-#add_subdirectory(${QT_ADVANCED_DOCKING_SYSTEM_SUBDIRECTORY})
-#include_directories(${QT_ADVANCED_DOCKING_SYSTEM_INCLUDE_DIR})
-
-
 #OpenCL
-#set(OPENCL_DIR "")
-
 find_package(OpenCL REQUIRED)
-
 include_directories(${OpenCL_INCLUDE_DIRS})
-
 link_directories(
   ${LIB_BUILD_DIR}
   ${BIN_BUILD_DIR}
   ${OpenCL_LIBRARY}
- #${EIGEN_LINK_DIR}
-
 )
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
@@ -63,11 +42,6 @@ file(GLOB_RECURSE HDRS ${PROJECT_SOURCE_DIR}/src/*.h)
 
 add_executable(${CMAKE_PROJECT_NAME} ${HDRS} ${SRCS})
 
-#add_dependencies(
- #${CMAKE_PROJECT_NAME}
-  #qtadvanceddocking
-#)
-
 find_package(Qt5 REQUIRED COMPONENTS Core Widgets Gui Multimedia Multimediawidgets)
 target_link_libraries(
   ${CMAKE_PROJECT_NAME}
@@ -76,9 +50,7 @@ target_link_libraries(
   Qt5::Widgets
   Qt5::Gui
   Qt5::Multimedia
- # Qt5::Multimediawidgets
   ${OpenCL_LIBRARY}
-  #qtadvanceddocking
 )
 
 message("${CMAKE_CXX_COMPILER_ID} COMPILER")

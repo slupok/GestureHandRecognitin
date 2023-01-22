@@ -219,7 +219,7 @@ IPError OpenclContext::GaussianBlur(IPImage *image, int radius, float sigma)
     cl_mem tmp_image = clCreateBuffer(m_device->m_context, CL_MEM_READ_WRITE, length, 0x0, &errorCode);
     if(!tmp_image)
         return IPErrorOutOfMemory;
-    clEnqueueCopyBuffer(m_queue, clImage->m_image, tmp_image, 0, 0,length, 0, 0x0, 0x0);
+    errorCode = clEnqueueCopyBuffer(m_queue, clImage->m_image, tmp_image, 0, 0,length, 0, 0x0, 0x0);
 
     int isHorizontal;
 
@@ -627,10 +627,10 @@ void OpenclContext::RunTest()
     size_t gridSize = sizeArray;
     size_t threadsPerBlock = sizeArray < 256? sizeArray : 256;
 
-    clEnqueueNDRangeKernel(queue, m_device->m_testKernel, 1, 0x0, &gridSize, &threadsPerBlock, 0, 0x0, 0x0);
-    clFinish(queue);
+    error = clEnqueueNDRangeKernel(queue, m_device->m_testKernel, 1, 0x0, &gridSize, &threadsPerBlock, 0, 0x0, 0x0);
+    error = clFinish(queue);
 
-    clEnqueueReadBuffer(queue, res_mem, CL_TRUE, 0, sizeArray * sizeof (int), res, 0, 0x0, 0x0);
+    error = clEnqueueReadBuffer(queue, res_mem, CL_TRUE, 0, sizeArray * sizeof (int), res, 0, 0x0, 0x0);
 
     for(int i = 0; i < sizeArray; i ++)
     {

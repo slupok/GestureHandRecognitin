@@ -75,8 +75,8 @@ __kernel void grayscaleColorConversionKernel(const __global RGB_format *image,
 
 }
 
-__kernel void FrameDifferenceKernel(__constant void *currentImage,
-                                    __constant void *previousImage,
+__kernel void FrameDifferenceKernel(const __global void *currentImage,
+                                    const __global void *previousImage,
                                     __global uchar *resultMask,
                                     uchar threshold,
                                     PixelType curPixelType,
@@ -96,11 +96,11 @@ __kernel void FrameDifferenceKernel(__constant void *currentImage,
 
     if(curPixelType == RGB24)
     {
-        currentColor = RGB2Grayscale(((__constant RGB_format*)currentImage)[index]);
+        currentColor = RGB2Grayscale(((const __global RGB_format*)currentImage)[index]);
     }
     if(prevPixelType == RGB24)
     {
-        previousColor = RGB2Grayscale(((__constant RGB_format*)previousImage)[index]);
+        previousColor = RGB2Grayscale(((const __global RGB_format*)previousImage)[index]);
     }
 
     resultMask[index] = abs(currentColor - previousColor) < threshold ? 0 : 255;
@@ -140,8 +140,8 @@ __kernel void thresholdColorConversionKernel(const __global RGB_format *image,
 
 __kernel void SeparableGaussianBlurKernel(
                                           __global void *image,
-                                          __constant void *baseImage,
-                                          __constant float* filter,
+                                          const __global void *baseImage,
+                                          const __global float* filter,
                                           int radius,
                                           int isHorizontal,
                                           int width,
@@ -189,9 +189,9 @@ __kernel void SeparableGaussianBlurKernel(
             weight = filter[(i+radius) + filterDim * (j+radius)];
             if(pixelType == RGB24)
             {
-                acc.x += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].r / 255.0f);
-                acc.y += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].g / 255.0f);
-                acc.z += weight * (((__constant RGB_format*)baseImage)[ix + width * iy].b / 255.0f);
+                acc.x += weight * (((const __global RGB_format*)baseImage)[ix + width * iy].r / 255.0f);
+                acc.y += weight * (((const __global RGB_format*)baseImage)[ix + width * iy].g / 255.0f);
+                acc.z += weight * (((const __global RGB_format*)baseImage)[ix + width * iy].b / 255.0f);
             }
         }
 #endif
@@ -225,7 +225,7 @@ __kernel void SeparableGaussianBlurKernel(
  **************/
 
 __kernel void MorphologicalErosionKernel(__global uchar *image,
-                                         __constant uchar *baseImage,
+                                         const __global uchar *baseImage,
                                          int radius,
                                          int width,
                                          int height)
@@ -249,7 +249,7 @@ __kernel void MorphologicalErosionKernel(__global uchar *image,
 }
 
 __kernel void MorphologicalDilationKernel(__global uchar *image,
-                                          __constant uchar *baseImage,
+                                          const __global uchar *baseImage,
                                           int radius,
                                           int width,
                                           int height)
@@ -271,7 +271,7 @@ __kernel void MorphologicalDilationKernel(__global uchar *image,
         }
 }
 
-__kernel void CoordinateSummingKernel(__constant uchar *image,
+__kernel void CoordinateSummingKernel(const __global uchar *image,
                                       __local uint *xLocalSum,
                                       __local uint *yLocalSum,
                                       __global uint *xResult,
@@ -324,8 +324,8 @@ __kernel void CoordinateSummingKernel(__constant uchar *image,
 
 //здесь можно передавать кол-во пикселей контура для оптимизаци
 //или хранить массив индексов валидных вокселей
-__kernel void BitmapCentralMomentKernel(__constant void *image,
-                                        __constant uchar *bitmap,
+__kernel void BitmapCentralMomentKernel(const __global void *image,
+                                        const __global uchar *bitmap,
                                         __local uint *localResult,
                                         __global uint *result,
                                         int centerX,
@@ -353,7 +353,7 @@ __kernel void BitmapCentralMomentKernel(__constant void *image,
     else
     {
         if(pixelType == RGB24)
-            grayColor = RGB2Grayscale(((__constant RGB_format*)image)[globalId]);
+            grayColor = RGB2Grayscale(((const __global RGB_format*)image)[globalId]);
 
         localResult[localId] = (uint)(pow((float)(x - centerX),p) * pow((float)(y - centerY),q) * grayColor);
     }
@@ -379,7 +379,7 @@ __kernel void BitmapCentralMomentKernel(__constant void *image,
  *************/
 
 __kernel void BitmapSubtractionKernel(__global uchar *baseImage,
-                                 __constant uchar *subtrahendImage,
+                                 const __global uchar *subtrahendImage,
                                  int width,
                                  int height)
 {
@@ -395,7 +395,7 @@ __kernel void BitmapSubtractionKernel(__global uchar *baseImage,
 }
 
 __kernel void BitmapIntersectionKernel(__global uchar *firstImage,
-                                  __constant uchar *secondImage,
+                                  const __global uchar *secondImage,
                                   int width,
                                   int height)
 {

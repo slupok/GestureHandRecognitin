@@ -1,140 +1,7 @@
 #include <math.h>
 
 #include "gestureRecognition.h"
-#if 0
-//Евклидова метрика
-float length_E(RGB_format a, RGB_format b)
-{
-    return sqrt((a.r - b.r)*(a.r - b.r) + (a.g - b.g)*(a.g - b.g) + (a.b - b.b)*(a.b - b.b));
-}
-//Манхеттена метрика
-float length_M(RGB_format a, RGB_format b)
-{
-    return ( abs(a.r - b.r) + abs(a.g - b.g) + abs(a.b - b.b));
-}
-
-typedef struct Cluster{
-    RGB_format center;
-    int *positions;//хранит индексы
-    int pointsCount;
-} Cluster;
-
-//поиск принадлежности можно вычислять как ближайшую точку к кластерам
-//а не перебирать по всем точкам
-bool isPositionInCluster(int index, Cluster cluster)
-{
-    for(int i = 0; i < cluster.pointsCount; i++)
-    {
-        if(index == cluster.positions[i])
-            return true;
-    }
-
-    return false;
-}
-
-uint getNumberClusterWithColor(Cluster* clusters, int cntClusters, RGB_format color)
-{
-    float min = length_M(color,clusters[0].center);
-    uint numNearestCluster = 0;
-    int len;
-    for(int i = 1; i < cntClusters; i++)
-    {
-        len = length_M(color,clusters[i].center);
-        if(len < min)
-        {
-            min = len;
-            numNearestCluster = i;
-        }
-    }
-
-    return 0;
-}
-
-void Kmeans(unsigned char *mask, RGB_format *image, int height, int width)
-{
-    /************
-     * init
-     ************/
-    int clustersCount = 5;
-    if(clustersCount <= 0)
-        return;
-    Cluster* cluster = (Cluster*)malloc(sizeof (Cluster) * width * height * clustersCount);
-    int step = 255/5;
-    for(int i = 0; i < clustersCount; i++ )
-    {
-        cluster[i].positions = (int*)malloc(sizeof (int) * width * height);
-        cluster[i].pointsCount = 0;
-        cluster[i].center = {(unsigned char)(i*step),
-                             (unsigned char)(i*step),
-                             (unsigned char)(i*step)};
-    }
-
-    /************
-     * k iteration
-     ************/
-    int iterationCount = 40;
-    RGB_format color;
-    float min;
-    int numNearestCluster;//Номер ближайшего кластера
-    int len;
-    long *sum_r = (long*)malloc(sizeof (long) * clustersCount);
-    long *sum_g = (long*)malloc(sizeof (long) * clustersCount);
-    long *sum_b = (long*)malloc(sizeof (long) * clustersCount);
-    for(int k = 0; k < iterationCount; k++)
-    {
-        /************
-         * определение принадлежности цвета к кластерам
-         ************/
-
-        sum_r[numNearestCluster] = 0;
-        sum_g[numNearestCluster] = 0;
-        sum_b[numNearestCluster] = 0;
-
-        for(int i = 0; i < width * height ; i++)
-        {
-            color = image[i];
-            min = length_M(color,cluster[0].center);
-            numNearestCluster = 0;
-            for(int n = 0; n < clustersCount; n++)
-            {
-                len = length_M(color,cluster[n].center);
-                if(len < min)
-                {
-                    min = len;
-                    numNearestCluster = n;
-                }
-            }
-            cluster[numNearestCluster].positions[cluster[numNearestCluster].pointsCount++] = i;
-
-            mask[i] = numNearestCluster;
-
-            sum_r[numNearestCluster] += color.r;
-            sum_g[numNearestCluster] += color.g;
-            sum_b[numNearestCluster] += color.b;
-        }
-
-        //перерасчет центров
-        for(int n = 0; n < clustersCount; n++)
-        {
-            int t = cluster[n].pointsCount;
-            cluster[n].pointsCount = 0;
-            if(t == 0)
-                continue;
-            cluster[n].center = {(unsigned char)(sum_r[n]/t),(unsigned char)(sum_g[n]/t),(unsigned char)(sum_b[n]/t)};
-        }
-    }
-
-    free(sum_r);
-    free(sum_g);
-    free(sum_b);
-    for(int n = 0; n < clustersCount; n++)
-    {
-        free(cluster[n].positions);
-    }
-    free(cluster);
-
-}
-#endif
+#include "ImageProcessing/OpenCL/opencl_context.h"
 
 void setBinarizedImage(uint8_t *mask, QImage *img)
 {
@@ -164,23 +31,6 @@ GestureRecognition::GestureRecognition() : QObject()
     m_backgroundMask = nullptr;
     m_mask = nullptr;
     m_block = false;
-
-    m_fiveInv[0] = 0.03606f;
-    m_fiveInv[1] = 0.002960058f;
-    m_fiveInv[2] = 0.00405476f;
-    m_fiveInv[3] = 0.00405476f;
-    m_fiveInv[4] = 2.32557411522f;
-    m_fiveInv[5] = 11.4448330701f;
-    m_fiveInv[6] = 5.621915188f;
-
-    m_niceInv[0] = 0.09227512f;
-    m_niceInv[1] = 0.00200292f;
-    m_niceInv[2] = 0.04409886f;
-    m_niceInv[3] = 0.04409886f;
-    m_niceInv[4] = 0.002252922f;
-    m_niceInv[5] = 0.00192984f;
-    m_niceInv[5] = 0.001380888f;
-
 }
 GestureRecognition::~GestureRecognition()
 {
@@ -205,18 +55,16 @@ void GestureRecognition::startGR()
 static bool m_block_ = false;
 void GestureRecognition::onUpdateFrame(QImage frame)
 {
+
     if(m_block_)
         return;
     m_block_ = true;
 
     IPError error;
-    int width = frame.width();
-    int height = frame.height();
+    uint width = (uint)frame.width();
+    uint height = (uint)frame.height();
 
-   // QImage imgGray(width, height, QImage::Format_Grayscale8);
-  //  QImage imgRGB(width, height, QImage::Format_RGB888);
-
-    if(cntFrame <= 70 )
+    if(cntFrame <= 40 )
     {
         cntFrame++;
         m_block_ = false;
@@ -228,53 +76,57 @@ void GestureRecognition::onUpdateFrame(QImage frame)
         m_image = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
         m_backgroundMask = m_context->CreateImage(width, height, PixelType::RGB24, (unsigned char*)frame.bits());
         error = m_context->GaussianBlur(m_backgroundMask, 3, 4.0f);
+        if(error != IPNoError)
+            return;
         m_mask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
         m_tmpMask = m_context->CreateImage(width, height, PixelType::Grayscale8, 0x0);
-
-       // m_backgroundMask->ReadImage(imgRGB.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
-       // imgRGB.save("bg.jpg", "JPG");
     }
     else
     {
-        m_image->WriteImage((unsigned char*)frame.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
+        m_image->WriteImage((unsigned char*)frame.bits(), width * height * (uint)GetBytesPerPixel(PixelType::RGB24));
     }
 
-    uint sum = 0;
-
-   // m_image->ReadImage(imgRGB.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
-  //  imgRGB.save("base.jpg", "JPG");
+    //uint sum = 0;
 
     error = m_context->GaussianBlur(m_image, 3, 4.0f);
-   // m_image->ReadImage(imgRGB.bits(), width * height * GetBytesPerPixel(PixelType::RGB24));
-    //imgRGB.save("gaussianBlur.jpg", "JPG");
-
+    if(error != IPNoError)
+        return;
     error = m_context->FrameDifference(m_image, m_backgroundMask, m_mask, 6);
-   // m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
-    //imgGray.save("frameDiff.jpg", "JPG");
-
+    if(error != IPNoError)
+        return;
     error = m_context->MorphologicalErosion(m_mask, 3);
+    if(error != IPNoError)
+        return;
     error = m_context->MorphologicalDilation(m_mask, 2);
-    //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
-    //imgGray.save("eros_and_dil_1.jpg", "JPG");
+    if(error != IPNoError)
+        return;
 
     error = m_context->ColorThresholdConversion(m_image, m_mask);
-    //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
-    //imgGray.save("colorThreshold.jpg", "JPG");
-
-    //сохраняем Bitmap
+    if(error != IPNoError)
+        return;
     error = m_context->copyImage(m_mask, m_tmpMask);
+    if(error != IPNoError)
+        return;
     error = m_context->MorphologicalErosion(m_mask, 7);
+    if(error != IPNoError)
+        return;
     error = m_context->MorphologicalDilation(m_mask, 6);
-    //находим пересечение новой картинки со старой
+    if(error != IPNoError)
+        return;
     error = m_context->BitmapIntersection(m_mask, m_tmpMask);
-    //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
-    //imgGray.save("eros_and_dil_2.jpg", "JPG");
+    if(error != IPNoError)
+        return;
 
    error = m_context->copyImage(m_mask, m_tmpMask);
+   if(error != IPNoError)
+       return;
    error = m_context->MorphologicalDilation(m_mask, 1);
+   if(error != IPNoError)
+       return;
    error = m_context->BitmapSubtraction(m_mask, m_tmpMask);
-   //m_mask->ReadImage(imgGray.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
-   //imgGray.save("contour.jpg", "JPG");
+   if(error != IPNoError)
+       return;
+
 #if 0
    int centerX = 0;
    int centerY = 0;
@@ -308,10 +160,6 @@ void GestureRecognition::onUpdateFrame(QImage frame)
    int resultInv[GESTURE_COUNT];
    memset(resultInv, 0, GESTURE_COUNT * sizeof(int));
 
-   //проверить эти данные
-   //0.103746   0.00277854   0.102431   0.102431   0.0104921   0.00383107   0.00709715
-   //FIVE
-
    float minValue;
    int minGesture;
    for(int invariant = 0; invariant < INVARIANTS_COUNT; invariant++)
@@ -343,53 +191,28 @@ void GestureRecognition::onUpdateFrame(QImage frame)
             maxValue = resultInv[i];
         }
    }
-   switch (maxGesture)
-   {
-   case 0:
-       m_ui->setOutput("FIVE");
-       qDebug() << "FIVE";
-       break;
-   case 1:
-       m_ui->setOutput("NICE");
-       qDebug() << "NICING";
-       break;
-   case 2:
-       m_ui->setOutput("THREE");
-       qDebug() << "THREE";
-       break;
-   case 3:
-       m_ui->setOutput("ROCK!");
-       qDebug() << "ROCK!";
-       break;
-   default:
-       m_ui->setOutput("I DONT KNOW");
-       qDebug() << "I DONT KNOW";
-       break;
-
-   }
-
 #endif
 
 finish:
-#if 0
     if(m_mask->GetPixelType() == PixelType::Grayscale8)
     {
-        QImage img(width, height, QImage::Format_Grayscale8);
-        m_mask->ReadImage(img.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
-        m_baseImage->setImage(img);
-
-
+        QImage maskImage(width, height, QImage::Format_Grayscale8);
+        m_mask->ReadImage(maskImage.bits(), width * height * GetBytesPerPixel(PixelType::Grayscale8));
+        m_maskView->setImage(maskImage);
     }
-#else
-    m_baseImage->setImage(frame);
-#endif
+    m_captureView->setImage(frame);
 
     m_block_ = false;
 }
 
-void GestureRecognition::setUI(WebCam *baseImage)
+void GestureRecognition::setCaptureView(ImageView *baseImage)
 {
-    m_baseImage = baseImage;
+    m_captureView = baseImage;
+}
+
+void GestureRecognition::setMaskView(ImageView *baseImage)
+{
+    m_maskView = baseImage;
 }
 
 float GestureRecognition::NormalizedCentralMoment(int p, int q, int cx, int cy, int m00)

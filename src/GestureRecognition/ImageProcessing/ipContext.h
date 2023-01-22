@@ -27,11 +27,7 @@ public:
     virtual void RunTest() = 0;//del
 
     virtual IPImage* CreateImage(uint w, uint h, PixelType pixelType, void *data) = 0;// create IPImage with used device type
-#if 0
-    virtual IPError AttachImage(IPImage *image) = 0;//можно избавиться, если параметром будет передаваться
-    void DetachImage();
-    bool IsValidImage();
-#endif
+
     virtual IPEnum GetDeviceType() = 0;
 
     //image functions
@@ -40,8 +36,6 @@ public:
 
     //functions
  //   virtual IPError kMeans(int clustersCount, int iterationsCount, RGB_format recognitionColor) = 0;
-
-
     virtual IPError FrameDifference(IPImage *currentImage, IPImage *previousImage, IPImage *resultMask, uchar theshold) = 0;
     virtual IPError ColorThresholdConversion(IPImage *image, IPImage *resultMask) = 0;
     virtual IPError GaussianBlur(IPImage *image, int radius, float sigma) = 0;
